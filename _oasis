@@ -1,0 +1,52 @@
+# +-------------------------------------------------------------------+
+# | Package parameters                                                |
+# +-------------------------------------------------------------------+
+
+OASISFormat: 0.1
+Name: zed
+Version: 1.0
+LicenseFile: LICENSE
+License: BSD3
+Authors: Jérémie Dimino
+Homepage: http://zed.forge.ocamlcore.org/
+BuildTools: ocamlbuild
+Plugins: DevFiles (0.2), META (0.2)
+Synopsis: Zed
+Description: An edition engine for editors, text widgets, ...
+
+# +-------------------------------------------------------------------+
+# | The library                                                       |
+# +-------------------------------------------------------------------+
+
+Library zed
+  FindlibName: zed
+  BuildDepends: react
+  XMETADescription: Edition engine
+  Path: src
+  Install: true
+  Modules:
+    Zed_utf8,
+    Zed_rope
+
+# +-------------------------------------------------------------------+
+# | Doc                                                               |
+# +-------------------------------------------------------------------+
+
+Document "zed-api"
+  Title: API reference for Zed
+  Type: ocamlbuild (0.2)
+  Install: true
+  InstallDir: $htmldir/api
+  DataFiles: style.css
+  BuildTools: ocamldoc
+  XOCamlbuildPath: ./
+  XOCamlbuildLibraries: zed
+
+# +-------------------------------------------------------------------+
+# | Misc                                                              |
+# +-------------------------------------------------------------------+
+
+SourceRepository head
+  Type: darcs
+  Location: http://darcs.ocamlcore.org/repos/zed
+  Browser: http://darcs.ocamlcore.org/cgi-bin/darcsweb.cgi?r=zed;a=summary

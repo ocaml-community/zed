@@ -1,0 +1,6 @@
+# OASIS_START
+# DO NOT EDIT (digest: 55ce9eff0fac0f086efe637417816ff8)
+# Library zed
+"src": include
+<src/*.ml{,i}>: pkg_react
+# OASIS_STOP
