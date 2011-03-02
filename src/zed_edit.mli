@@ -29,6 +29,9 @@ val text : t -> Zed_rope.t
   (** [text edit] returns the signal holding the current contents of
       the buffer. *)
 
+val lines : t -> Zed_lines.t
+  (** [lines edit] returns the set of line position of [text edit]. *)
+
 val changes : t -> (int * int * int) event
   (** [changes edit] returns an event which occurs with values of the
       form [(start, added, removed)] when the contents of the engine

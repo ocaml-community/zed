@@ -17,6 +17,9 @@ type t = {
   mutable text : Zed_rope.t;
   (* The contents of the engine. *)
 
+  mutable lines : Zed_lines.t;
+  (* The set of line position of [text]. *)
+
   changes : (int * int * int) event;
   send_changes : (int * int * int) -> unit;
   (* Changes of the contents. *)
@@ -36,6 +39,7 @@ let create ?(editable=fun pos -> true) ?(move=(+)) () =
   let changes, send_changes = E.create () in
   {
     text = Zed_rope.empty;
+    lines = Zed_lines.empty;
     changes;
     send_changes;
     editable;
@@ -47,6 +51,7 @@ let create ?(editable=fun pos -> true) ?(move=(+)) () =
    +-----------------------------------------------------------------+ *)
 
 let text engine = engine.text
+let lines engine = engine.lines
 let changes engine = engine.changes
 
 (* +-----------------------------------------------------------------+
@@ -88,14 +93,16 @@ module Actions(Context : sig val context : context end) = struct
     if text == new_text then
       (* If the text has not changed, just move the cursor. *)
       Zed_cursor.move cursor (added - removed)
-    else if added >= removed then begin
+    else begin
       edit.text <- new_text;
-      edit.send_changes (start, added, removed);
-      Zed_cursor.move cursor (added - removed)
-    end else begin
-      edit.text <- new_text;
-      Zed_cursor.move cursor (added - removed);
-      edit.send_changes (start, added, removed);
+      edit.lines <- Zed_lines.replace edit.lines start removed (Zed_lines.of_rope (Zed_rope.sub new_text start added));
+      if added >= removed then begin
+        edit.send_changes (start, added, removed);
+        Zed_cursor.move cursor (added - removed)
+      end else begin
+        Zed_cursor.move cursor (added - removed);
+        edit.send_changes (start, added, removed);
+      end
     end
 
   (* Each of the following actions returns the new text, the new
