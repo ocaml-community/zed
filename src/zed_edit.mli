@@ -39,6 +39,19 @@ val changes : t -> (int * int * int) event
       number of characters added and [removed] is the number of
       characters removed. *)
 
+val erase_mode : t -> bool signal
+  (** [erase_mode edit] returns the ``erase'' mode of the buffer. In
+      this mode character inserted in the buffer erase existing
+      ones. *)
+
+val get_erase_mode : t -> bool
+  (** [erase_mode edit] returns the current erase mode of the
+      buffer. *)
+
+val set_erase_mode : t -> bool -> unit
+  (** [set_erase_mode edit state] sets the status of the erase mode
+      for the given engine. *)
+
 (** {6 Cursors} *)
 
 val new_cursor : t -> Zed_cursor.t
@@ -60,6 +73,27 @@ val create_context : ?check : bool -> t -> Zed_cursor.t -> context
       [editable] function of the engine and all movement will be
       passed through the [move] function of the engine. *)
 
+val goto : context -> int -> unit
+  (** [goto ctx position] moves the cursor to the given position. It
+      raises {!Zed_cursor.Out_of_bounds} if the position is outside the
+      bounds of the text. *)
+
+val move : context -> int -> unit
+  (** [move ctx delta] moves the cursor by the given number of
+      characters. It raises {!Zed_cursor.Out_of_bounds} if the current
+      plus [delta] is outside the bounds of the text. *)
+
+val position : context -> int
+  (** [position ctx] returns the position of the cursor. *)
+
+val at_bob : context -> bool
+  (** [at_bob ctx] returns [true] iff the cursor is at the beginning
+      of the buffer. *)
+
+val at_eob : context -> bool
+  (** [at_eob ctx] returns [true] iff the cursor is at the end of the
+      buffer. *)
+
 val insert : context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
 
@@ -67,10 +101,12 @@ val remove : context -> int -> unit
   (** [remove ctx n] removes [n] characters at current position. *)
 
 val next_char : context -> unit
-  (** [next_char ctx] moves the cursor to the next character. *)
+  (** [next_char ctx] moves the cursor to the next character. It does
+      nothing if the cursor is at the end of the text. *)
 
 val prev_char : context -> unit
-  (** [prev_char ctx] moves the cursor to the previous character. *)
+  (** [prev_char ctx] moves the cursor to the previous character. It
+      does nothing if the cursor is at the beginning of the text. *)
 
 (** {6 Action by names} *)
 

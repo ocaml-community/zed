@@ -24,6 +24,10 @@ type t = {
   send_changes : (int * int * int) -> unit;
   (* Changes of the contents. *)
 
+  erase_mode : bool signal;
+  set_erase_mode : bool -> unit;
+  (* The current erase mode. *)
+
   editable : int -> bool;
   (* The editable function of the engine. *)
 
@@ -37,11 +41,14 @@ type t = {
 
 let create ?(editable=fun pos -> true) ?(move=(+)) () =
   let changes, send_changes = E.create () in
+  let erase_mode, set_erase_mode = S.create false in
   {
     text = Zed_rope.empty;
     lines = Zed_lines.empty;
     changes;
     send_changes;
+    erase_mode;
+    set_erase_mode;
     editable;
     move;
   }
@@ -53,6 +60,9 @@ let create ?(editable=fun pos -> true) ?(move=(+)) () =
 let text engine = engine.text
 let lines engine = engine.lines
 let changes engine = engine.changes
+let erase_mode engine = engine.erase_mode
+let get_erase_mode engine = S.value engine.erase_mode
+let set_erase_mode engine state = engine.set_erase_mode state
 
 (* +-----------------------------------------------------------------+
    | Cursors                                                         |
@@ -74,79 +84,65 @@ type context = {
 let create_context ?(check=true) edit cursor =
   { edit; cursor; check }
 
-module Actions(Context : sig val context : context end) = struct
+let goto ctx position =
+  Zed_cursor.goto ctx.cursor position
 
-  open Context
+let move ctx delta =
+  Zed_cursor.move ctx.cursor delta
 
-  (* Aliases *)
-  let { edit; cursor; check } = Context.context
-  let text = edit.text
-  let length = Zed_rope.length text
-  let position = S.value (Zed_cursor.position cursor)
+let position ctx =
+  Zed_cursor.get_position ctx.cursor
 
-  let perform action =
-    let new_text, new_position, added, removed = action () in
-    (* Pass the movement through the [move] function. *)
-    let new_position = if check then edit.move position (new_position - position) else new_position in
-    (* Start of modifications. *)
-    let start = min position new_position in
-    if text == new_text then
-      (* If the text has not changed, just move the cursor. *)
-      Zed_cursor.move cursor (added - removed)
-    else begin
-      edit.text <- new_text;
-      edit.lines <- Zed_lines.replace edit.lines start removed (Zed_lines.of_rope (Zed_rope.sub new_text start added));
-      if added >= removed then begin
-        edit.send_changes (start, added, removed);
-        Zed_cursor.move cursor (added - removed)
-      end else begin
-        Zed_cursor.move cursor (added - removed);
-        edit.send_changes (start, added, removed);
-      end
-    end
+let at_bob ctx =
+  Zed_cursor.get_position ctx.cursor = 0
 
-  (* Each of the following actions returns the new text, the new
-     position, the number of characters added and the number of
-     characters removed. *)
+let at_eob ctx =
+  Zed_cursor.get_position ctx.cursor = Zed_rope.length ctx.edit.text
 
-  let insert rope =
+let insert ctx rope =
+  let position = Zed_cursor.get_position ctx.cursor in
+  if not ctx.check || ctx.edit.editable position then begin
     let len = Zed_rope.length rope in
-    (Zed_rope.insert text position rope, position + len, len, 0)
+    if S.value ctx.edit.erase_mode then begin
+      let text_len = Zed_rope.length ctx.edit.text in
+      if position + len > text_len then begin
+        ctx.edit.text <- Zed_rope.replace ctx.edit.text position (text_len - position) rope;
+        ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position (text_len - position) (Zed_lines.of_rope rope);
+        ctx.edit.send_changes (position, len, text_len - position)
+      end else begin
+        ctx.edit.text <- Zed_rope.replace ctx.edit.text position len rope;
+        ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len (Zed_lines.of_rope rope);
+        ctx.edit.send_changes (position, len, len);
+      end;
+      Zed_cursor.move ctx.cursor len
+    end else begin
+      ctx.edit.text <- Zed_rope.insert ctx.edit.text position rope;
+      ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
+      ctx.edit.send_changes (position, len, 0);
+      Zed_cursor.move ctx.cursor len
+    end
+  end
 
-  let remove n =
-    if position + n >= length then
-      (Zed_rope.before text position, position, 0, length - position)
-    else
-      (Zed_rope.remove text position n, position, 0, n)
-
-  let next_char () =
-    if position = length then
-      (text, position, 0, 0)
-    else
-      (text, position + 1, 0, 0)
-
-  let prev_char () =
-    if position = 0 then
-      (text, position, 0, 0)
-    else
-      (text, position - 1, 0, 0)
-end
-
-let insert ctx text =
-  let module A = Actions(struct let context = ctx end) in
-  A.perform (fun () -> A.insert text)
-
-let remove ctx n =
-  let module A = Actions(struct let context = ctx end) in
-  A.perform (fun () -> A.remove n)
+let remove ctx len =
+  let position = Zed_cursor.get_position ctx.cursor in
+  if not ctx.check || ctx.edit.editable position then begin
+    let text_len = Zed_rope.length ctx.edit.text in
+    if position + len > text_len then begin
+      ctx.edit.text <- Zed_rope.remove ctx.edit.text position (text_len - position);
+      ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position (text_len - position);
+      ctx.edit.send_changes (position, 0, text_len - position)
+    end else begin
+      ctx.edit.text <- Zed_rope.remove ctx.edit.text position len;
+      ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
+      ctx.edit.send_changes (position, 0, len);
+    end
+  end
 
 let next_char ctx =
-  let module A = Actions(struct let context = ctx end) in
-  A.perform A.next_char
+  if not (at_eob ctx) then move ctx 1
 
 let prev_char ctx =
-  let module A = Actions(struct let context = ctx end) in
-  A.perform A.prev_char
+  if not (at_bob ctx) then move ctx (-1)
 
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |

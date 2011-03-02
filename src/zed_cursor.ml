@@ -50,9 +50,17 @@ let copy cursor = create cursor.length cursor.changes (S.value cursor.position)
 
 let position cursor = cursor.position
 
+let get_position cursor = S.value cursor.position
+
 let move cursor delta =
   let new_position = S.value cursor.position + delta in
   if new_position < 0 || new_position > cursor.length then
     raise Out_of_bounds
   else
     cursor.set_position new_position
+
+let goto cursor position =
+  if position < 0 || position > cursor.length then
+    raise Out_of_bounds
+  else
+    cursor.set_position position

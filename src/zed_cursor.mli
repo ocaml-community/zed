@@ -39,6 +39,15 @@ val position : t -> int signal
   (** [position cursor] returns the signal holding the current
       position of the given cursor. *)
 
+val get_position : t -> int
+  (** [get_position cursor] returns the current position of
+      [cursor]. *)
+
+val goto : t -> int -> unit
+  (** [goto cursor position] moves the given cursor to the given
+      position. It raises {!Out_of_bounds} if [position] is outside
+      the bounds of the text. *)
+
 val move : t -> int -> unit
   (** [move cursor delta] moves the given cursor by the given number
       of characters. It raises {!Out_of_bounds} if the result is
