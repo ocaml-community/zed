@@ -86,19 +86,29 @@ val move : context -> int -> unit
 val position : context -> int
   (** [position ctx] returns the position of the cursor. *)
 
-val at_bob : context -> bool
-  (** [at_bob ctx] returns [true] iff the cursor is at the beginning
-      of the buffer. *)
+val at_bol : context -> bool
+  (** [at_bol ctx] returns [true] iff the cursor is at the beginning
+      of the current line. *)
 
-val at_eob : context -> bool
-  (** [at_eob ctx] returns [true] iff the cursor is at the end of the
-      buffer. *)
+val at_eol : context -> bool
+  (** [at_eol ctx] returns [true] iff the cursor is at the end of the
+      current line. *)
+
+val at_bot : context -> bool
+  (** [at_bot ctx] returns [true] iff the cursor is at the beginning
+      of the text. *)
+
+val at_eot : context -> bool
+  (** [at_eot ctx] returns [true] iff the cursor is at the end of the
+      text. *)
 
 val insert : context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
 
 val remove : context -> int -> unit
-  (** [remove ctx n] removes [n] characters at current position. *)
+  (** [remove ctx n] removes [n] characters at current position. If
+      there is less than [n] characters a current position, it removes
+      everything until the end of the text. *)
 
 val next_char : context -> unit
   (** [next_char ctx] moves the cursor to the next character. It does
@@ -108,15 +118,76 @@ val prev_char : context -> unit
   (** [prev_char ctx] moves the cursor to the previous character. It
       does nothing if the cursor is at the beginning of the text. *)
 
+val next_line : context -> unit
+  (** [next_line ctx] moves the cursor to the next line. If the cursor
+      is on the last line, it is moved to the end of the buffer. *)
+
+val prev_line : context -> unit
+  (** [prev_line ctx] moves the cursor to the previous line. If the
+      cursor is on the first line, it is moved to the beginning of the
+      buffer. *)
+
+val goto_bol : context -> unit
+  (** [goto_bol ctx] moves the cursor to the beginning of the current
+      line. *)
+
+val goto_eol : context -> unit
+  (** [goto_eol ctx] moves the cursor to the end of the current
+      line. *)
+
+val goto_bot : context -> unit
+  (** [goto_bot ctx] moves the cursor to the beginning of the text. *)
+
+val goto_eot : context -> unit
+  (** [goto_eot ctx] moves the cursor to the end of the text. *)
+
+val delete_next_char : context -> unit
+  (** [delete_next_char ctx] deletes the character after the cursor,
+      if any. *)
+
+val delete_prev_char : context -> unit
+  (** [delete_prev_char ctx] delete the character before the
+      cursor. *)
+
+val delete_next_line : context -> unit
+  (** [delete_next_line ctx] delete everything until the end of the
+      current line. *)
+
+val delete_prev_line : context -> unit
+  (** [delete_next_line ctx] delete everything until the beginning of
+      the current line. *)
+
+val switch_erase_mode : context -> unit
+  (** [switch_erase_mode ctx] switch the current erase mode. *)
+
 (** {6 Action by names} *)
 
 (** Type of action requiring no parameters. *)
 type action =
   | Next_char
   | Prev_char
+  | Next_line
+  | Prev_line
+  | Goto_bol
+  | Goto_eol
+  | Goto_bot
+  | Goto_eot
+  | Delete_next_char
+  | Delete_prev_char
+  | Delete_next_line
+  | Delete_prev_line
+  | Switch_erase_mode
 
-val exec : context -> action -> unit
-  (** [exec ctx action] executes the given action. *)
+val get_action : action -> (context -> unit)
+  (** [get_action action] returns the function associated to the given
+      action. *)
+
+val actions : (action * string) list
+  (** List of actions with their names. *)
+
+val doc_of_action : action -> string
+  (** [doc_of_action action] returns a short description of the
+      action. *)
 
 val action_of_name : string -> action
   (** [action_of_name str] converts the given action name into an
