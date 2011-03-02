@@ -29,12 +29,12 @@ val text : t -> Zed_rope.t signal
   (** [text edit] returns the signal holding the current contents of
       the buffer. *)
 
-val changes : t -> (Zed_rope.t * int * int) event
+val changes : t -> (Zed_rope.t * int * int * int) event
   (** [changes edit] returns an event which occurs with values of the
-      form [(text, start, delta)] when the contents of the engine
-      changes. [text] is the new text, [start] is the start of
-      modifications and [delta] is the number of characters
-      added/removed. *)
+      form [(text, start, added, removed)] when the contents of the
+      engine changes. [text] is the new text, [start] is the start of
+      modifications, [added] is the number of characters added and
+      [removed] is the number of characters removed. *)
 
 (** {6 Cursors} *)
 
