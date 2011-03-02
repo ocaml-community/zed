@@ -14,16 +14,12 @@ open React
    +-----------------------------------------------------------------+ *)
 
 type t = {
-  text : Zed_rope.t signal;
+  mutable text : Zed_rope.t;
   (* The contents of the engine. *)
 
-  changes : (Zed_rope.t * int * int * int) event;
-  send_changes : (Zed_rope.t * int * int * int) -> unit;
+  changes : (int * int * int) event;
+  send_changes : (int * int * int) -> unit;
   (* Changes of the contents. *)
-
-  cursor_changes : (int * int) event;
-  (* Same as [changes] but contains only [(start, delta)]. This is
-     used for creating cursors. *)
 
   editable : int -> bool;
   (* The editable function of the engine. *)
@@ -39,10 +35,9 @@ type t = {
 let create ?(editable=fun pos -> true) ?(move=(+)) () =
   let changes, send_changes = E.create () in
   {
-    text = S.hold ~eq:(==) Zed_rope.empty (E.map (fun (text, start, added, removed) -> text) changes);
+    text = Zed_rope.empty;
     changes;
     send_changes;
-    cursor_changes = E.map (fun (text, start, added, removed) -> (start, added - removed)) changes;
     editable;
     move;
   }
@@ -59,7 +54,7 @@ let changes engine = engine.changes
    +-----------------------------------------------------------------+ *)
 
 let new_cursor engine =
-  Zed_cursor.create (Zed_rope.length (S.value engine.text)) engine.cursor_changes 0
+  Zed_cursor.create (Zed_rope.length engine.text) engine.changes 0
 
 (* +-----------------------------------------------------------------+
    | Actions                                                         |
@@ -80,7 +75,7 @@ module Actions(Context : sig val context : context end) = struct
 
   (* Aliases *)
   let { edit; cursor; check } = Context.context
-  let text = S.value edit.text
+  let text = edit.text
   let length = Zed_rope.length text
   let position = S.value (Zed_cursor.position cursor)
 
@@ -94,21 +89,22 @@ module Actions(Context : sig val context : context end) = struct
       (* If the text has not changed, just move the cursor. *)
       Zed_cursor.move cursor (added - removed)
     else if added >= removed then begin
-      edit.send_changes (new_text, start, added, removed);
+      edit.text <- new_text;
+      edit.send_changes (start, added, removed);
       Zed_cursor.move cursor (added - removed)
     end else begin
+      edit.text <- new_text;
       Zed_cursor.move cursor (added - removed);
-      edit.send_changes (new_text, start, added, removed);
+      edit.send_changes (start, added, removed);
     end
 
-  (* Each of the followin actions returns the new text, the new
+  (* Each of the following actions returns the new text, the new
      position, the number of characters added and the number of
      characters removed. *)
 
   let insert rope =
-    (Zed_rope.insert text position rope,
-     position + Zed_rope.length rope,
-     Zed_rope.length rope, 0)
+    let len = Zed_rope.length rope in
+    (Zed_rope.insert text position rope, position + len, len, 0)
 
   let next_char () =
     if position = length then

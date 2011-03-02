@@ -22,14 +22,14 @@ exception Out_of_bounds
   (** Exception raised when trying to move a cursor outside the bounds
       of the text it points to. *)
 
-val create : int -> (int * int) event -> int -> t
+val create : int -> (int * int * int) event -> int -> t
   (** [create length changes position] creates a new cursor pointing
       to position [position]. [length] is the current length of the
       text the cursor points to. It raises {!Out_of_bounds} if
       [position] is greater than [length]. [changes] is an event which
-      occurs with values of the form [(start, delta)] when the text
-      changes. [start] is the start of the modification and [delta] is
-      the number of characters added/removed. *)
+      occurs with values of the form [(start, added, removed)] when
+      the text changes, with the same semantic as
+      {!Zed_edit.changes}. *)
 
 val copy : t -> t
   (** [copy cursor] creates a copy of the given cursor. The new cursor

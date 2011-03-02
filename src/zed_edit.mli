@@ -25,16 +25,16 @@ val create : ?editable : (int -> bool) -> ?move : (int -> int -> int) -> unit ->
 
 (** {6 State} *)
 
-val text : t -> Zed_rope.t signal
+val text : t -> Zed_rope.t
   (** [text edit] returns the signal holding the current contents of
       the buffer. *)
 
-val changes : t -> (Zed_rope.t * int * int * int) event
+val changes : t -> (int * int * int) event
   (** [changes edit] returns an event which occurs with values of the
-      form [(text, start, added, removed)] when the contents of the
-      engine changes. [text] is the new text, [start] is the start of
-      modifications, [added] is the number of characters added and
-      [removed] is the number of characters removed. *)
+      form [(start, added, removed)] when the contents of the engine
+      changes. [start] is the start of modifications, [added] is the
+      number of characters added and [removed] is the number of
+      characters removed. *)
 
 (** {6 Cursors} *)
 

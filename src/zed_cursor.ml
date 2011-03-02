@@ -15,7 +15,7 @@ type t = {
   position : int signal;
   set_position : int -> unit;
   mutable length : int;
-  changes : (int * int) event;
+  changes : (int * int * int) event;
   mutable handle_changes : unit event;
 }
 
@@ -23,7 +23,8 @@ let create length changes position =
   if position < 0 || position > length then raise Out_of_bounds;
   let position, set_position = S.create position in
   let cursor = { position; set_position; length; changes; handle_changes = E.never } in
-  let handle_changes (start, delta) =
+  let handle_changes (start, added, removed) =
+    let delta = added - removed in
     cursor.length <- cursor.length + delta;
     if cursor.length < 0 then raise Out_of_bounds;
     let position = S.value position in
