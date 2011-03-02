@@ -63,6 +63,9 @@ val create_context : ?check : bool -> t -> Zed_cursor.t -> context
 val insert : context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
 
+val remove : context -> int -> unit
+  (** [remove ctx n] removes [n] characters at current position. *)
+
 val next_char : context -> unit
   (** [next_char ctx] moves the cursor to the next character. *)
 

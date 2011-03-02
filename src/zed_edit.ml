@@ -113,6 +113,12 @@ module Actions(Context : sig val context : context end) = struct
     let len = Zed_rope.length rope in
     (Zed_rope.insert text position rope, position + len, len, 0)
 
+  let remove n =
+    if position + n >= length then
+      (Zed_rope.before text position, position, 0, length - position)
+    else
+      (Zed_rope.remove text position n, position, 0, n)
+
   let next_char () =
     if position = length then
       (text, position, 0, 0)
@@ -129,6 +135,10 @@ end
 let insert ctx text =
   let module A = Actions(struct let context = ctx end) in
   A.perform (fun () -> A.insert text)
+
+let remove ctx n =
+  let module A = Actions(struct let context = ctx end) in
+  A.perform (fun () -> A.remove n)
 
 let next_char ctx =
   let module A = Actions(struct let context = ctx end) in
