@@ -45,7 +45,7 @@ type 'a t = {
   clipboard : clipboard;
   (* The clipboard for this engine. *)
 
-  mark : Zed_cursor.t;
+  mutable mark : Zed_cursor.t;
   (* The cursor that points to the mark. *)
 
   selection : bool signal;
@@ -56,6 +56,8 @@ type 'a t = {
 (* +-----------------------------------------------------------------+
    | Creation                                                        |
    +-----------------------------------------------------------------+ *)
+
+let dummy_cursor = Zed_cursor.create 0 E.never (fun () -> Zed_lines.empty) 0 0
 
 let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
   let changes, send_changes = E.create () in
@@ -70,7 +72,7 @@ let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
           { clipboard_get = (fun () -> !r);
             clipboard_set = (fun x -> r := x) }
   in
-  {
+  let rec edit = {
     data = None;
     text = Zed_rope.empty;
     lines = Zed_lines.empty;
@@ -81,10 +83,12 @@ let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
     editable;
     move;
     clipboard;
-    mark = Zed_cursor.create 0 changes 0;
+    mark = dummy_cursor;
     selection;
     set_selection;
-  }
+  } in
+  edit.mark <- Zed_cursor.create 0 changes (fun () -> edit.lines) 0 0;
+  edit
 
 (* +-----------------------------------------------------------------+
    | State                                                           |
@@ -112,7 +116,7 @@ let set_selection engine state = engine.set_selection state
    +-----------------------------------------------------------------+ *)
 
 let new_cursor engine =
-  Zed_cursor.create (Zed_rope.length engine.text) engine.changes 0
+  Zed_cursor.create (Zed_rope.length engine.text) engine.changes (fun () -> engine.lines) 0 0
 
 (* +-----------------------------------------------------------------+
    | Actions                                                         |
@@ -131,29 +135,34 @@ let edit ctx = ctx.edit
 let cursor ctx = ctx.cursor
 let check ctx = ctx.check
 
-let goto ctx new_position =
+let goto ctx ?set_wanted_column new_position =
   if ctx.check then
     let position = Zed_cursor.get_position ctx.cursor in
-    Zed_cursor.goto ctx.cursor (ctx.edit.move position (new_position - position))
+    Zed_cursor.goto ctx.cursor ?set_wanted_column (ctx.edit.move position (new_position - position))
   else
-    Zed_cursor.goto ctx.cursor new_position
+    Zed_cursor.goto ctx.cursor ?set_wanted_column new_position
 
-let move ctx delta =
+let move ctx ?set_wanted_column delta =
   if ctx.check then
-    Zed_cursor.goto ctx.cursor (ctx.edit.move (Zed_cursor.get_position ctx.cursor) delta)
+    Zed_cursor.goto ctx.cursor ?set_wanted_column (ctx.edit.move (Zed_cursor.get_position ctx.cursor) delta)
   else
-    Zed_cursor.move ctx.cursor delta
+    Zed_cursor.move ctx.cursor ?set_wanted_column delta
 
 let position ctx =
   Zed_cursor.get_position ctx.cursor
 
+let line ctx =
+  Zed_cursor.get_line ctx.cursor
+
+let column ctx =
+  Zed_cursor.get_column ctx.cursor
+
 let at_bol ctx =
-  let position = Zed_cursor.get_position ctx.cursor in
-  position = Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines position)
+  Zed_cursor.get_column ctx.cursor = 0
 
 let at_eol ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  let index = Zed_lines.line_index ctx.edit.lines position in
+  let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then
     position = Zed_rope.length ctx.edit.text
   else
@@ -211,26 +220,35 @@ let prev_char ctx =
   if not (at_bot ctx) then move ctx (-1)
 
 let next_line ctx =
-  let position = Zed_cursor.get_position ctx.cursor in
-  let index = Zed_lines.line_index ctx.edit.lines position in
+  let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then
-    goto ctx (Zed_rope.length ctx.edit.text)
-  else
-    goto ctx (Zed_lines.line_start ctx.edit.lines (index + 1))
+    goto ctx ~set_wanted_column:false (Zed_rope.length ctx.edit.text)
+  else begin
+    let start = Zed_lines.line_start ctx.edit.lines (index + 1) in
+    let stop =
+      if index + 1 = Zed_lines.count ctx.edit.lines then
+        Zed_rope.length ctx.edit.text
+      else
+        Zed_lines.line_start ctx.edit.lines (index + 2) - 1
+    in
+    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+  end
 
 let prev_line ctx =
-  let position = Zed_cursor.get_position ctx.cursor in
-  let index = Zed_lines.line_index ctx.edit.lines position in
-  if index = 0 then
-    Zed_cursor.goto ctx.cursor 0
-  else
-    Zed_cursor.goto ctx.cursor (Zed_lines.line_start ctx.edit.lines (index - 1))
+  let index = Zed_cursor.get_line ctx.cursor in
+  if index = 0 then begin
+    goto ctx ~set_wanted_column:false 0
+  end else begin
+    let start = Zed_lines.line_start ctx.edit.lines (index - 1) in
+    let stop = Zed_lines.line_start ctx.edit.lines index - 1 in
+    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+  end
 
 let goto_bol ctx =
-  goto ctx (Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines (Zed_cursor.get_position ctx.cursor)))
+  goto ctx (Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor))
 
 let goto_eol ctx =
-  let index = Zed_lines.line_index ctx.edit.lines (Zed_cursor.get_position ctx.cursor) in
+  let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then
     goto ctx (Zed_rope.length ctx.edit.text)
   else
@@ -258,7 +276,7 @@ let delete_prev_char ctx =
 let delete_next_line ctx =
   ctx.edit.set_selection false;
   let position = Zed_cursor.get_position ctx.cursor in
-  let index = Zed_lines.line_index ctx.edit.lines position in
+  let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then
     remove ctx (Zed_rope.length ctx.edit.text - position)
   else
@@ -267,14 +285,14 @@ let delete_next_line ctx =
 let delete_prev_line ctx =
   ctx.edit.set_selection false;
   let position = Zed_cursor.get_position ctx.cursor in
-  let start = Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines position) in
+  let start = Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor) in
   goto ctx start;
   let new_position = Zed_cursor.get_position ctx.cursor in
   if new_position < position then remove ctx (position - new_position)
 
 let kill_next_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  let index = Zed_lines.line_index ctx.edit.lines position in
+  let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then begin
     ctx.edit.clipboard.clipboard_set (Zed_rope.after ctx.edit.text position);
     ctx.edit.set_selection false;
@@ -288,7 +306,7 @@ let kill_next_line ctx =
 
 let kill_prev_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  let start = Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines position) in
+  let start = Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor) in
   goto ctx start;
   let new_position = Zed_cursor.get_position ctx.cursor in
   if new_position <= position then begin

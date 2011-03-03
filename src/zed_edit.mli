@@ -124,18 +124,26 @@ val check : 'a context -> bool
   (** [check ctx] returns whether the context has been created with
       the [check] flag. *)
 
-val goto : 'a context -> int -> unit
-  (** [goto ctx position] moves the cursor to the given position. It
-      raises {!Zed_cursor.Out_of_bounds} if the position is outside the
-      bounds of the text. *)
+val goto : 'a context -> ?set_wanted_column : bool -> int -> unit
+  (** [goto ctx ?set_column position] moves the cursor to the given
+      position. It raises {!Zed_cursor.Out_of_bounds} if the position
+      is outside the bounds of the text. If [set_wanted_column] is
+      [true], the wanted column of the cursor is set to the new
+      column. *)
 
-val move : 'a context -> int -> unit
+val move : 'a context -> ?set_wanted_column : bool -> int -> unit
   (** [move ctx delta] moves the cursor by the given number of
       characters. It raises {!Zed_cursor.Out_of_bounds} if the current
       plus [delta] is outside the bounds of the text. *)
 
 val position : 'a context -> int
   (** [position ctx] returns the position of the cursor. *)
+
+val line : 'a context -> int
+  (** [line ctx] returns the line of the cursor. *)
+
+val column : 'a context -> int
+  (** [column ctx] returns the column of the cursor. *)
 
 val at_bol : 'a context -> bool
   (** [at_bol ctx] returns [true] iff the cursor is at the beginning
