@@ -14,14 +14,28 @@ open React
 type t
   (** Type of edition engines. *)
 
-val create : ?editable : (int -> bool) -> ?move : (int -> int -> int) -> unit -> t
-  (** [create ?editable ?move ()] creates a new edition engine in the
-      initial state. [editable] is used to determine whether the text
-      at given position is editable or not, and [move] is used to
-      alter deplacement of the cursor. It receive the current position
-      of the cursor, a distance to move (which can be negative) and
-      must returns the new position of the cursor. It defaults to [fun
-      pos delta -> pos + delta]. *)
+(** Type of clipboards. *)
+type clipboard = {
+  clipboard_get : unit -> Zed_rope.t;
+  (** Returns the current contents of the clipboard. *)
+  clipboard_set : Zed_rope.t -> unit;
+  (** Sets the contents of the clipboard. *)
+}
+
+val create : ?editable : (int -> bool) -> ?move : (int -> int -> int) -> ?clipboard : clipboard -> unit -> t
+  (** [create ?editable ?move ?clipboard ()] creates a new edition
+      engine in the initial state.
+
+      [editable] is used to determine whether the text at given
+      position is editable or not.
+
+      [move] is used to alter deplacement of the cursor. It receive
+      the current position of the cursor, a distance to move (which
+      can be negative) and must returns the new position of the
+      cursor. It defaults to [fun pos delta -> pos + delta].
+
+      [clipboard] is the clipboard to use for this engine. If none is
+      defined, a new one using a reference is created. *)
 
 (** {6 State} *)
 
@@ -51,6 +65,20 @@ val get_erase_mode : t -> bool
 val set_erase_mode : t -> bool -> unit
   (** [set_erase_mode edit state] sets the status of the erase mode
       for the given engine. *)
+
+val mark : t -> Zed_cursor.t
+  (** [mark edit] returns the cursor used to for the mark in the given
+      engine. *)
+
+val selection : t -> bool signal
+  (** [selection edit] returns the signal holding the current
+      selection state. If [true], text is being selectionned. *)
+
+val get_selection : t -> bool
+  (** [selection edit] returns the current selection state. *)
+
+val set_selection : t -> bool -> unit
+  (** [set_selection edit state] sets the selection state. *)
 
 (** {6 Cursors} *)
 
@@ -157,8 +185,34 @@ val delete_prev_line : context -> unit
   (** [delete_next_line ctx] delete everything until the beginning of
       the current line. *)
 
+val kill_next_line : context -> unit
+  (** [kill_next_line ctx] delete everything until the end of the
+      current line and save it to the clipboard. *)
+
+val kill_prev_line : context -> unit
+  (** [kill_next_line ctx] delete everything until the beginning of
+      the current line and save it to the clipboard. *)
+
 val switch_erase_mode : context -> unit
   (** [switch_erase_mode ctx] switch the current erase mode. *)
+
+val set_mark : context -> unit
+  (** [set_mark ctx] sets the mark at current position. *)
+
+val goto_mark : context -> unit
+  (** [goto_mark ctx] moves the cursor to the mark. *)
+
+val copy : context -> unit
+  (** [copy ctx] copies the current selectionned region to the
+      clipboard. *)
+
+val kill : context -> unit
+  (** [kill ctx] copies the current selectionned region to the
+      clipboard and remove it. *)
+
+val yank : context -> unit
+  (** [yank ctx] inserts the contents of the clipboard at current
+      position. *)
 
 (** {6 Action by names} *)
 
@@ -176,7 +230,14 @@ type action =
   | Delete_prev_char
   | Delete_next_line
   | Delete_prev_line
+  | Kill_next_line
+  | Kill_prev_line
   | Switch_erase_mode
+  | Set_mark
+  | Goto_mark
+  | Copy
+  | Kill
+  | Yank
 
 val get_action : action -> (context -> unit)
   (** [get_action action] returns the function associated to the given

@@ -13,6 +13,11 @@ open React
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
 
+type clipboard = {
+  clipboard_get : unit -> Zed_rope.t;
+  clipboard_set : Zed_rope.t -> unit;
+}
+
 type t = {
   mutable text : Zed_rope.t;
   (* The contents of the engine. *)
@@ -33,15 +38,35 @@ type t = {
 
   move : int -> int -> int;
   (* The move function of the engine. *)
+
+  clipboard : clipboard;
+  (* The clipboard for this engine. *)
+
+  mark : Zed_cursor.t;
+  (* The cursor that points to the mark. *)
+
+  selection : bool signal;
+  set_selection : bool -> unit;
+  (* The current selection state. *)
 }
 
 (* +-----------------------------------------------------------------+
    | Creation                                                        |
    +-----------------------------------------------------------------+ *)
 
-let create ?(editable=fun pos -> true) ?(move=(+)) () =
+let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
+  let selection, set_selection = S.create false in
+  let clipboard =
+    match clipboard with
+      | Some clipboard ->
+          clipboard
+      | None ->
+          let r = ref Zed_rope.empty in
+          { clipboard_get = (fun () -> !r);
+            clipboard_set = (fun x -> r := x) }
+  in
   {
     text = Zed_rope.empty;
     lines = Zed_lines.empty;
@@ -51,6 +76,10 @@ let create ?(editable=fun pos -> true) ?(move=(+)) () =
     set_erase_mode;
     editable;
     move;
+    clipboard;
+    mark = Zed_cursor.create 0 changes 0;
+    selection;
+    set_selection;
   }
 
 (* +-----------------------------------------------------------------+
@@ -63,6 +92,10 @@ let changes engine = engine.changes
 let erase_mode engine = engine.erase_mode
 let get_erase_mode engine = S.value engine.erase_mode
 let set_erase_mode engine state = engine.set_erase_mode state
+let mark engine = engine.mark
+let selection engine = engine.selection
+let get_selection engine = S.value engine.selection
+let set_selection engine state = engine.set_selection state
 
 (* +-----------------------------------------------------------------+
    | Cursors                                                         |
@@ -196,16 +229,20 @@ let goto_eot ctx =
   goto ctx (Zed_rope.length ctx.edit.text)
 
 let delete_next_char ctx =
-  if not (at_eot ctx) then
+  if not (at_eot ctx) then begin
+    ctx.edit.set_selection false;
     remove ctx 1
+  end
 
 let delete_prev_char ctx =
   if not (at_bot ctx) then begin
+    ctx.edit.set_selection false;
     move ctx (-1);
     remove ctx 1
   end
 
 let delete_next_line ctx =
+  ctx.edit.set_selection false;
   let position = Zed_cursor.get_position ctx.cursor in
   let index = Zed_lines.line_index ctx.edit.lines position in
   if index = Zed_lines.count ctx.edit.lines then
@@ -214,14 +251,70 @@ let delete_next_line ctx =
     remove ctx (Zed_lines.line_start ctx.edit.lines (index + 1) - position)
 
 let delete_prev_line ctx =
+  ctx.edit.set_selection false;
   let position = Zed_cursor.get_position ctx.cursor in
   let start = Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines position) in
   goto ctx start;
   let new_position = Zed_cursor.get_position ctx.cursor in
   if new_position < position then remove ctx (position - new_position)
 
+let kill_next_line ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
+  let index = Zed_lines.line_index ctx.edit.lines position in
+  if index = Zed_lines.count ctx.edit.lines then begin
+    ctx.edit.clipboard.clipboard_set (Zed_rope.after ctx.edit.text position);
+    ctx.edit.set_selection false;
+    remove ctx (Zed_rope.length ctx.edit.text - position)
+  end else begin
+    let len = Zed_lines.line_start ctx.edit.lines (index + 1) - position in
+    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position len);
+    ctx.edit.set_selection false;
+    remove ctx len
+  end
+
+let kill_prev_line ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
+  let start = Zed_lines.line_start ctx.edit.lines (Zed_lines.line_index ctx.edit.lines position) in
+  goto ctx start;
+  let new_position = Zed_cursor.get_position ctx.cursor in
+  if new_position <= position then begin
+    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (position - new_position));
+    ctx.edit.set_selection false;
+    remove ctx (position - new_position)
+  end
+
 let switch_erase_mode ctx =
   ctx.edit.set_erase_mode (not (S.value ctx.edit.erase_mode))
+
+let set_mark ctx =
+  Zed_cursor.goto ctx.edit.mark (Zed_cursor.get_position ctx.cursor);
+  ctx.edit.set_selection true
+
+let goto_mark ctx =
+  goto ctx (Zed_cursor.get_position ctx.edit.mark)
+
+let copy ctx =
+  if S.value ctx.edit.selection then begin
+    let a = Zed_cursor.get_position ctx.cursor and b = Zed_cursor.get_position ctx.edit.mark in
+    let a = min a b and b = max a b in
+    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text a (b - a));
+    ctx.edit.set_selection false
+  end
+
+let kill ctx =
+  if S.value ctx.edit.selection then begin
+    let a = Zed_cursor.get_position ctx.cursor and b = Zed_cursor.get_position ctx.edit.mark in
+    let a = min a b and b = max a b in
+    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text a (b - a));
+    ctx.edit.set_selection false;
+    goto ctx a;
+    let a = Zed_cursor.get_position ctx.cursor in
+    if a <= b then remove ctx (b - a)
+  end
+
+let yank ctx =
+  ctx.edit.set_selection false;
+  insert ctx (ctx.edit.clipboard.clipboard_get ())
 
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |
@@ -240,7 +333,14 @@ type action =
   | Delete_prev_char
   | Delete_next_line
   | Delete_prev_line
+  | Kill_next_line
+  | Kill_prev_line
   | Switch_erase_mode
+  | Set_mark
+  | Goto_mark
+  | Copy
+  | Kill
+  | Yank
 
 let get_action = function
   | Next_char -> next_char
@@ -255,7 +355,14 @@ let get_action = function
   | Delete_prev_char -> delete_prev_char
   | Delete_next_line -> delete_next_line
   | Delete_prev_line -> delete_prev_line
+  | Kill_next_line -> kill_next_line
+  | Kill_prev_line -> kill_prev_line
   | Switch_erase_mode -> switch_erase_mode
+  | Set_mark -> set_mark
+  | Goto_mark -> goto_mark
+  | Copy -> copy
+  | Kill -> kill
+  | Yank -> yank
 
 let doc_of_action = function
   | Next_char -> "move the cursor to the next character."
@@ -270,7 +377,14 @@ let doc_of_action = function
   | Delete_prev_char -> "delete the character before the cursor."
   | Delete_next_line -> "delete everything until the end of the current line."
   | Delete_prev_line -> "delete everything until the beginning of the current line."
+  | Kill_next_line -> "cut everything until the end of the current line."
+  | Kill_prev_line -> "cut everything until the beginning of the current line."
   | Switch_erase_mode -> "switch the current erasing mode."
+  | Set_mark -> "set the mark to the current position."
+  | Goto_mark -> "move the cursor to the mark."
+  | Copy -> "copy the current region to the clipboard."
+  | Kill -> "cut the current region to the clipboard."
+  | Yank -> "paste the contents of the clipboard at current position."
 
 let actions = [
   Next_char, "next-char";
@@ -285,7 +399,14 @@ let actions = [
   Delete_prev_char, "delete-prev-char";
   Delete_next_line, "delete-next-line";
   Delete_prev_line, "delete-prev-line";
+  Kill_next_line, "kill-next-line";
+  Kill_prev_line, "kill-prev-line";
   Switch_erase_mode, "switch-erase-mode";
+  Set_mark, "set-mark";
+  Goto_mark, "goto-mark";
+  Copy, "copy";
+  Kill, "kill";
+  Yank, "yank";
 ]
 
 let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)
