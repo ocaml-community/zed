@@ -18,7 +18,10 @@ type clipboard = {
   clipboard_set : Zed_rope.t -> unit;
 }
 
-type t = {
+type 'a t = {
+  mutable data : 'a option;
+  (* Custom data attached to the engine. *)
+
   mutable text : Zed_rope.t;
   (* The contents of the engine. *)
 
@@ -68,6 +71,7 @@ let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
             clipboard_set = (fun x -> r := x) }
   in
   {
+    data = None;
     text = Zed_rope.empty;
     lines = Zed_lines.empty;
     changes;
@@ -86,6 +90,12 @@ let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
    | State                                                           |
    +-----------------------------------------------------------------+ *)
 
+let get_data engine =
+  match engine.data with
+    | Some data -> data
+    | None -> raise Not_found
+let set_data engine data = engine.data <- Some data
+let clear_data engine = engine.data <- None
 let text engine = engine.text
 let lines engine = engine.lines
 let changes engine = engine.changes
@@ -108,14 +118,18 @@ let new_cursor engine =
    | Actions                                                         |
    +-----------------------------------------------------------------+ *)
 
-type context = {
-  edit : t;
+type 'a context = {
+  edit : 'a t;
   cursor : Zed_cursor.t;
   check : bool;
 }
 
-let create_context ?(check=true) edit cursor =
+let context ?(check=true) edit cursor =
   { edit; cursor; check }
+
+let edit ctx = ctx.edit
+let cursor ctx = ctx.cursor
+let check ctx = ctx.check
 
 let goto ctx new_position =
   if ctx.check then
