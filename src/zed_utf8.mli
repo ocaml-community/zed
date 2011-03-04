@@ -9,11 +9,10 @@
 
 (** UTF-8 enoded strings *)
 
+open CamomileLibrary
+
 type t = string
     (** Type of UTF-8 encoded strings. *)
-
-type code_point = int
-    (** Type of unicode code-point. *)
 
 exception Invalid of string * string
   (** [Invalid(error, text)] Exception raised when an invalid UTF-8
@@ -45,18 +44,18 @@ val validate : t -> int
 
 (** {6 Construction} *)
 
-val singleton : code_point -> t
+val singleton : UChar.t -> t
   (** [singleton ch] creates a string of length 1 containing only the
       given character. *)
 
-val make : int -> code_point -> t
+val make : int -> UChar.t -> t
   (** [make n ch] creates a string of length [n] filled with [ch]. *)
 
-val init : int -> (int -> code_point) -> t
+val init : int -> (int -> UChar.t) -> t
   (** [init n f] returns the contenation of [singleton (f 0)],
       [singleton (f 1)], ..., [singleton (f (n - 1))]. *)
 
-val rev_init : int -> (int -> code_point) -> t
+val rev_init : int -> (int -> UChar.t) -> t
   (** [rev_init n f] returns the contenation of [singleton (f (n -
       1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
 
@@ -72,7 +71,7 @@ val compare : t -> t -> int
 
 (** {6 Random access} *)
 
-val get : t -> int -> code_point
+val get : t -> int -> UChar.t
   (** [get str idx] returns the character at index [idx] in
       [str]. *)
 
@@ -118,71 +117,71 @@ val rev_concat : t -> t list -> t
   (** [concat sep l] returns the concatenation of all strings of [l]
       in reverse order separated by [sep]. *)
 
-val explode : t -> code_point list
+val explode : t -> UChar.t list
   (** [explode str] returns the list of all characters of [str]. *)
 
-val rev_explode : t -> code_point list
+val rev_explode : t -> UChar.t list
   (** [rev_explode str] returns the list of all characters of [str] in
       reverse order. *)
 
-val implode : code_point list -> t
+val implode : UChar.t list -> t
   (** [implode l] returns the concatenation of all characters of [l]. *)
 
-val rev_implode : code_point list -> t
+val rev_implode : UChar.t list -> t
   (** [rev_implode l] is the same as [implode (List.rev l)] but more
       efficient. *)
 
 (** {6 Text traversals} *)
 
-val iter : (code_point -> unit) -> t -> unit
+val iter : (UChar.t -> unit) -> t -> unit
   (** [iter f str] applies [f] an all characters of [str] starting
       from the left. *)
 
-val rev_iter : (code_point -> unit) -> t -> unit
+val rev_iter : (UChar.t -> unit) -> t -> unit
   (** [rev_iter f str] applies [f] an all characters of [str] starting
       from the right. *)
 
-val fold : (code_point -> 'a -> 'a) -> t -> 'a -> 'a
+val fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold f str acc] applies [f] on all characters of [str]
       starting from the left, accumulating a value. *)
 
-val rev_fold : (code_point -> 'a -> 'a) -> t -> 'a -> 'a
+val rev_fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [rev_fold f str acc] applies [f] on all characters of [str]
       starting from the right, accumulating a value. *)
 
-val map : (code_point -> code_point) -> t -> t
+val map : (UChar.t -> UChar.t) -> t -> t
   (** [map f str] maps all characters of [str] with [f]. *)
 
-val rev_map : (code_point -> code_point) -> t -> t
+val rev_map : (UChar.t -> UChar.t) -> t -> t
   (** [rev_map f str] maps all characters of [str] with [f] in reverse
       order. *)
 
-val filter : (code_point -> bool) -> t -> t
+val filter : (UChar.t -> bool) -> t -> t
   (** [filter f str] filters characters of [str] with [f]. *)
 
-val rev_filter : (code_point -> bool) -> t -> t
+val rev_filter : (UChar.t -> bool) -> t -> t
   (** [rev_filter f str] filters characters of [str] with [f] in
       reverse order. *)
 
-val filter_map : (code_point -> code_point option) -> t -> t
+val filter_map : (UChar.t -> UChar.t option) -> t -> t
   (** [filter_map f str] filters and maps characters of [str] with
       [f]. *)
 
-val rev_filter_map : (code_point -> code_point option) -> t -> t
+val rev_filter_map : (UChar.t -> UChar.t option) -> t -> t
   (** [rev_filter_map f str] filters and maps characters of [str] with
       [f] in reverse order. *)
 
 (** {6 Scanning} *)
 
-val for_all : (code_point -> bool) -> t -> bool
+val for_all : (UChar.t -> bool) -> t -> bool
   (** [for_all f text] returns whether all characters of [text] verify
       the predicate [f]. *)
 
-val exists : (code_point -> bool) -> t -> bool
+val exists : (UChar.t -> bool) -> t -> bool
   (** [exists f text] returns whether at least one character of [text]
       verify [f]. *)
 
-val count : (code_point -> bool) -> t -> int
+val count : (UChar.t -> bool) -> t -> int
   (** [count f text] returhs the number of characters of [text]
       verifying [f]. *)
 
@@ -201,22 +200,22 @@ val ends_with : t -> t -> bool
 
 (** {6 Stripping} *)
 
-val strip : ?predicate : (code_point -> bool) -> t -> t
+val strip : ?predicate : (UChar.t -> bool) -> t -> t
   (** [strip ?predicate text] returns [text] without its firsts and
       lasts characters that match [predicate]. [predicate] default to
-      testing whether [text] is one of [' '], ['\t'], ['\r'] or
-      ['\n']. For example:
+      testing whether the given character has the [`White_Space]
+      unicode property. For example:
 
       {[
         strip "\n  foo\n  " = "foo"
       ]}
   *)
 
-val lstrip : ?predicate : (code_point -> bool) -> t -> t
+val lstrip : ?predicate : (UChar.t -> bool) -> t -> t
   (** [lstrip ?predicate text] is the same as {!strip} but it only
       removes characters at the left of [text]. *)
 
-val rstrip : ?predicate : (code_point -> bool) -> t -> t
+val rstrip : ?predicate : (UChar.t -> bool) -> t -> t
   (** [lstrip ?predicate text] is the same as {!strip} but it only
       removes characters at the right of [text]. *)
 
@@ -238,14 +237,14 @@ val unsafe_prev : t -> int -> int
   (** [unsafe_prev str ofs] returns the offset of the previous
       character in [str]. *)
 
-val unsafe_extract : t -> int -> code_point
+val unsafe_extract : t -> int -> UChar.t
   (** [unsafe_extract str ofs] returns the code-point at offset [ofs]
       in [str]. *)
 
-val unsafe_extract_next : t -> int -> code_point * int
+val unsafe_extract_next : t -> int -> UChar.t * int
   (** [unsafe_extract_next str ofs] returns the code-point at offset
       [ofs] in [str] and the offset the next character. *)
 
-val unsafe_extract_prev : t -> int -> code_point * int
+val unsafe_extract_prev : t -> int -> UChar.t * int
   (** [unsafe_extract_prev str ofs] returns the code-point at the
       previous offset in [str] and this offset. *)

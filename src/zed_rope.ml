@@ -7,6 +7,8 @@
  * This file is a part of Zed, an editor engine.
  *)
 
+open CamomileLibraryDyn.Camomile
+
 (* Maximum length of a leaf *)
 let max_leaf_size = 256
 
@@ -558,7 +560,7 @@ let rec cmp_loop str1 ofs1 str2 ofs2 rest1 rest2 =
           cmp_search2 rope2 str1 ofs1 rest1 rest2
   else
     let chr1, ofs1 = Zed_utf8.unsafe_extract_next str1 ofs1 and chr2, ofs2 = Zed_utf8.unsafe_extract_next str2 ofs2 in
-    let d = chr1 - chr2 in
+    let d = UChar.code chr1 - UChar.code chr2 in
     if d = 0 then
       cmp_loop str1 ofs1 str2 ofs2 rest1 rest2
     else

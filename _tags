@@ -1,6 +1,7 @@
 # OASIS_START
-# DO NOT EDIT (digest: 55ce9eff0fac0f086efe637417816ff8)
+# DO NOT EDIT (digest: 8f28b6e121aaff12b59e0d507ca85ef8)
 # Library zed
 "src": include
 <src/*.ml{,i}>: pkg_react
+<src/*.ml{,i}>: pkg_camomile
 # OASIS_STOP

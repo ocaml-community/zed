@@ -20,7 +20,7 @@ Description: An edition engine for editors, text widgets, ...
 
 Library zed
   FindlibName: zed
-  BuildDepends: react
+  BuildDepends: react, camomile
   XMETADescription: Edition engine
   Path: src
   Install: true
