@@ -310,7 +310,7 @@ let kill_prev_line ctx =
   goto ctx start;
   let new_position = Zed_cursor.get_position ctx.cursor in
   if new_position <= position then begin
-    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (position - new_position));
+    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text new_position (position - new_position));
     ctx.edit.set_selection false;
     remove ctx (position - new_position)
   end
