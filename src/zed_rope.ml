@@ -293,6 +293,34 @@ let rec rev_map f = function
   | Node(depth, length_l, rope_l, length_r, rope_r) ->
       Node(depth, length_r, map f rope_r, length_l, map f rope_l)
 
+let rec iter_leaf f = function
+  | Leaf(text, _) ->
+      f text
+  | Node(_, _, rope_l, _, rope_r) ->
+      iter_leaf f rope_l;
+      iter_leaf f rope_r
+
+let rec rev_iter_leaf f = function
+  | Leaf(text, _) ->
+      f text
+  | Node(_, _, rope_l, _, rope_r) ->
+      rev_iter_leaf f rope_r;
+      rev_iter_leaf f rope_l
+
+let rec fold_leaf f rope acc =
+  match rope with
+    | Leaf(text, _) ->
+        f text acc
+    | Node(_, _, rope_l, _, rope_r) ->
+        fold_leaf f rope_r (fold_leaf f rope_l acc)
+
+let rec rev_fold_leaf f rope acc =
+  match rope with
+    | Leaf(text, _) ->
+        f text acc
+    | Node(_, _, rope_l, _, rope_r) ->
+        rev_fold_leaf f rope_l (rev_fold_leaf f rope_r acc)
+
 (* +-----------------------------------------------------------------+
    | Zippers                                                         |
    +-----------------------------------------------------------------+ *)

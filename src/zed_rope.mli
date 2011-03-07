@@ -136,6 +136,27 @@ val rev_map : (UChar.t -> UChar.t) -> t -> t
   (** [rev_map f str] maps all characters of [rope] with [f] in
       reverse order. *)
 
+(** {6 Iteration and folding on leafs} *)
+
+(** Note: for all of the following functions, the leaves must
+    absolutely not be modified. *)
+
+val iter_leaf : (Zed_utf8.t -> unit) -> t -> unit
+  (** [iter_leaf f rope] applies [f] on all leaves of [rope] starting
+      from the left. *)
+
+val rev_iter_leaf : (Zed_utf8.t -> unit) -> t -> unit
+  (** [iter_leaf f rope] applies [f] on all leaves of [rope] starting
+      from the right. *)
+
+val fold_leaf : (Zed_utf8.t -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold f rope acc] applies [f] on all leaves of [rope] starting
+      from the left, accumulating a value. *)
+
+val rev_fold_leaf : (Zed_utf8.t -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [rev_fold f rope acc] applies [f] on all leaves of [rope]
+      starting from the right, accumulating a value. *)
+
 (** {6 Zippers} *)
 
 module Zip : sig
