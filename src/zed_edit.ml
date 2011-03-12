@@ -7,6 +7,7 @@
  * This file is a part of Zed, an editor engine.
  *)
 
+open CamomileLibraryDyn.Camomile
 open React
 
 (* +-----------------------------------------------------------------+
@@ -213,6 +214,12 @@ let remove ctx len =
     end
   end
 
+let newline_rope =
+  Zed_rope.singleton (UChar.of_char '\n')
+
+let newline ctx =
+  insert ctx newline_rope
+
 let next_char ctx =
   if not (at_eot ctx) then move ctx 1
 
@@ -353,6 +360,7 @@ let yank ctx =
    +-----------------------------------------------------------------+ *)
 
 type action =
+  | Newline
   | Next_char
   | Prev_char
   | Next_line
@@ -375,6 +383,7 @@ type action =
   | Yank
 
 let get_action = function
+  | Newline -> newline
   | Next_char -> next_char
   | Prev_char -> prev_char
   | Next_line -> next_line
@@ -397,6 +406,7 @@ let get_action = function
   | Yank -> yank
 
 let doc_of_action = function
+  | Newline -> "insert a newline character."
   | Next_char -> "move the cursor to the next character."
   | Prev_char -> "move the cursor to the previous character."
   | Next_line -> "move the cursor to the next line."
@@ -419,6 +429,7 @@ let doc_of_action = function
   | Yank -> "paste the contents of the clipboard at current position."
 
 let actions = [
+  Newline, "newline";
   Next_char, "next-char";
   Prev_char, "prev-char";
   Next_line, "next-line";

@@ -169,6 +169,9 @@ val remove : 'a context -> int -> unit
       there is less than [n] characters a current position, it removes
       everything until the end of the text. *)
 
+val newline : 'a context -> unit
+  (** Insert a newline character. *)
+
 val next_char : 'a context -> unit
   (** [next_char ctx] moves the cursor to the next character. It does
       nothing if the cursor is at the end of the text. *)
@@ -249,6 +252,7 @@ val yank : 'a context -> unit
 
 (** Type of action requiring no parameters. *)
 type action =
+  | Newline
   | Next_char
   | Prev_char
   | Next_line
