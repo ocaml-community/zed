@@ -229,6 +229,31 @@ val rchop : t -> t
 
 (** {6 Unsafe offset API} *)
 
+val next : t -> int -> int
+  (** [next str ofs] returns the offset of the next character in
+      [str]. *)
+
+val prev : t -> int -> int
+  (** [prev str ofs] returns the offset of the previous character in
+      [str]. *)
+
+val extract : t -> int -> UChar.t
+  (** [extract str ofs] returns the code-point at offset [ofs] in
+      [str]. *)
+
+val extract_next : t -> int -> UChar.t * int
+  (** [extract_next str ofs] returns the code-point at offset [ofs] in
+      [str] and the offset the next character. *)
+
+val extract_prev : t -> int -> UChar.t * int
+  (** [extract_prev str ofs] returns the code-point at the previous
+      offset in [str] and this offset. *)
+
+(** {6 Unsafe offset API} *)
+
+(** These functions does not check that the given offset is inside the
+    bounds of the given string. *)
+
 val unsafe_next : t -> int -> int
   (** [unsafe_next str ofs] returns the offset of the next character
       in [str]. *)

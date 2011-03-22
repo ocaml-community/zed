@@ -790,3 +790,37 @@ let rchop = function
   | str ->
       let ofs = unsafe_prev str (String.length str) in
       unsafe_sub str 0 ofs
+
+(* +-----------------------------------------------------------------+
+   | Offset API                                                      |
+   +-----------------------------------------------------------------+ *)
+
+let extract str ofs =
+  if ofs < 0 || ofs >= String.length str then
+    raise Out_of_bounds
+  else
+    unsafe_extract str ofs
+
+let next str ofs =
+  if ofs < 0 || ofs >= String.length str then
+    raise Out_of_bounds
+  else
+    unsafe_next str ofs
+
+let extract_next str ofs =
+  if ofs < 0 || ofs >= String.length str then
+    raise Out_of_bounds
+  else
+    unsafe_extract_next str ofs
+
+let prev str ofs =
+  if ofs <= 0 || ofs > String.length str then
+    raise Out_of_bounds
+  else
+    unsafe_prev str ofs
+
+let extract_prev str ofs =
+  if ofs <= 0 || ofs > String.length str then
+    raise Out_of_bounds
+  else
+    unsafe_extract_prev str ofs
