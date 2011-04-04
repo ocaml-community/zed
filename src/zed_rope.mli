@@ -30,6 +30,14 @@ val make : int -> UChar.t -> t
   (** [make length char] creates a rope of length [length] containing
       only [char]. *)
 
+val init : int -> (int -> UChar.t) -> t
+  (** [init n f] returns the contenation of [singleton (f 0)],
+      [singleton (f 1)], ..., [singleton (f (n - 1))]. *)
+
+val rev_init : int -> (int -> UChar.t) -> t
+  (** [rev_init n f] returns the contenation of [singleton (f (n -
+      1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
+
 val singleton : UChar.t -> t
   (** [singleton ch] creates a rope of length 1 containing only
       [ch]. *)
@@ -251,3 +259,6 @@ module Buffer : sig
   val reset : t -> unit
     (** [reset buffer] resets [buffer] to its initial state. *)
 end
+
+(** {6 Camomile compatible interface} *)
+module Text : UnicodeString.Type with type t = rope and type index = Zip.t

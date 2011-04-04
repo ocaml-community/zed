@@ -662,6 +662,24 @@ module Buffer = struct
 end
 
 (* +-----------------------------------------------------------------+
+   | Init                                                            |
+   +-----------------------------------------------------------------+ *)
+
+let init n f =
+  let buf = Buffer.create () in
+  for i = 0 to n - 1 do
+    Buffer.add buf (f i)
+  done;
+  Buffer.contents buf
+
+let rev_init n f =
+  let buf = Buffer.create () in
+  for i = n - 1 downto 0 do
+    Buffer.add buf (f i)
+  done;
+  Buffer.contents buf
+
+(* +-----------------------------------------------------------------+
    | To/from strings                                                 |
    +-----------------------------------------------------------------+ *)
 
@@ -677,3 +695,41 @@ let to_string rope =
         collect (collect acc rope_r) rope_l
   in
   Zed_utf8.concat "" (collect [] rope)
+
+(* +-----------------------------------------------------------------+
+   | Camomile compatible interface                                   |
+   +-----------------------------------------------------------------+ *)
+
+module Text = struct
+  type t = rope
+
+  let get = get
+  let init = init
+  let length = length
+
+  type index = Zip.t
+  let look rope zip = fst (Zip.next zip)
+  let nth rope idx = Zip.make_f rope idx
+  let next rope zip = Zip.move 1 zip
+  let prev rope zip = Zip.move (-1) zip
+  let out_of_range rope zip = not (Zip.at_eos zip)
+
+  let iter = iter
+  let compare = compare
+
+  let first rope = Zip.make_f rope 0
+  let last rope = Zip.make_b rope 1
+  let move rope zip delta = Zip.move delta zip
+  let compare_index rope zip1 zip2 = Zip.offset zip1 - Zip.offset zip2
+
+  module Buf = struct
+    type buf = Buffer.t
+    let create n = Buffer.create ()
+    let contents = Buffer.contents
+    let clear = Buffer.reset
+    let reset = Buffer.reset
+    let add_char = Buffer.add
+    let add_string buf rope = iter (Buffer.add buf) rope
+    let add_buffer buf buf' = add_string buf (Buffer.contents buf')
+  end
+end

@@ -29,7 +29,8 @@ Library zed
     Zed_rope,
     Zed_edit,
     Zed_cursor,
-    Zed_lines
+    Zed_lines,
+    Zed_re
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
