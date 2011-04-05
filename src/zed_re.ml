@@ -36,7 +36,7 @@ let regexp_match ?sem regexp rope idx =
   convert (Re.regexp_match ?sem regexp rope (Zed_rope.Zip.make_f rope idx))
 
 let search_forward ?sem regexp rope idx =
-  convert (Re.search_forward ?sem regexp rope (Zed_rope.Zip.make_f rope idx))
+  convert (try Re.search_forward ?sem regexp rope (Zed_rope.Zip.make_f rope idx) with Not_found -> None)
 
 let search_backward ?sem regexp rope idx =
   let rec loop zip =

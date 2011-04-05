@@ -10,6 +10,8 @@
 open CamomileLibraryDyn.Camomile
 open React
 
+module CaseMap = CaseMap.Make(Zed_rope.Text)
+
 (* +-----------------------------------------------------------------+
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
@@ -52,6 +54,12 @@ type 'a t = {
   selection : bool signal;
   set_selection : bool -> unit;
   (* The current selection state. *)
+
+  match_word : Zed_rope.t -> int -> int option;
+  (* The function for matching words. *)
+
+  locale : string option signal;
+  (* The buffer's locale. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -60,7 +68,23 @@ type 'a t = {
 
 let dummy_cursor = Zed_cursor.create 0 E.never (fun () -> Zed_lines.empty) 0 0
 
-let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
+let match_by_regexp re rope idx =
+  match Zed_re.regexp_match ~sem:`Longest re rope idx with
+    | None ->
+        None
+    | Some arr ->
+        match arr.(0) with
+          | Some(zip1, zip2) ->
+              Some(Zed_rope.Zip.offset zip2)
+          | None ->
+              None
+
+let regexp_word =
+  let set = UCharInfo.load_property_set `Alphabetic in
+  let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
+  Zed_re.compile (`Repn(`Set set, 1, None))
+
+let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard ?(match_word=match_by_regexp regexp_word) ?(locale=S.const None) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
@@ -87,6 +111,8 @@ let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard () =
     mark = dummy_cursor;
     selection;
     set_selection;
+    match_word;
+    locale;
   } in
   edit.mark <- Zed_cursor.create 0 changes (fun () -> edit.lines) 0 0;
   edit
@@ -197,6 +223,16 @@ let insert ctx rope =
       ctx.edit.send_changes (position, len, 0);
       move ctx len
     end
+  end
+
+let insert_no_erase ctx rope =
+  let position = Zed_cursor.get_position ctx.cursor in
+  if not ctx.check || ctx.edit.editable position then begin
+    let len = Zed_rope.length rope in
+    ctx.edit.text <- Zed_rope.insert ctx.edit.text position rope;
+    ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
+    ctx.edit.send_changes (position, len, 0);
+    move ctx len
   end
 
 let remove ctx len =
@@ -355,6 +391,95 @@ let yank ctx =
   ctx.edit.set_selection false;
   insert ctx (ctx.edit.clipboard.clipboard_get ())
 
+let search_word_forward ctx =
+  let len = Zed_rope.length ctx.edit.text in
+  let rec loop idx =
+    if idx = len then
+      None
+    else
+      match ctx.edit.match_word ctx.edit.text idx with
+        | Some idx' ->
+            Some(idx, idx')
+        | None ->
+            loop (idx + 1)
+  in
+  loop (Zed_cursor.get_position ctx.cursor)
+
+let search_word_backward ctx =
+  let rec loop idx =
+    if idx = -1 then
+      None
+    else
+      match ctx.edit.match_word ctx.edit.text idx with
+        | Some idx' ->
+            loop2 (idx - 1) (idx, idx')
+        | None ->
+            loop (idx - 1)
+  and loop2 idx result =
+    if idx = -1 then
+      Some result
+    else
+      match ctx.edit.match_word ctx.edit.text idx with
+        | Some idx' ->
+            loop2 (idx - 1) (idx, idx')
+        | None ->
+            Some result
+  in
+  loop (Zed_cursor.get_position ctx.cursor - 1)
+
+let capitalize_word ctx =
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx1;
+        if Zed_cursor.get_position ctx.cursor = idx1 && idx1 < idx2 then begin
+          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
+          remove ctx (Zed_rope.length str);
+          let ch, str = Zed_rope.break str 1 in
+          insert_no_erase ctx (Zed_rope.append
+                                 (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) ch)
+                                 (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str))
+        end
+    | None ->
+        ()
+
+let lowercase_word ctx =
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx1;
+        if Zed_cursor.get_position ctx.cursor = idx1 then begin
+          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
+          remove ctx (Zed_rope.length str);
+          insert_no_erase ctx (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str)
+        end
+    | None ->
+        ()
+
+let uppercase_word ctx =
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx1;
+        if Zed_cursor.get_position ctx.cursor = idx1 then begin
+          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
+          remove ctx (Zed_rope.length str);
+          insert_no_erase ctx (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) str)
+        end
+    | None ->
+        ()
+
+let next_word ctx =
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx2
+    | None ->
+        ()
+
+let prev_word ctx =
+  match search_word_backward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx1
+    | None ->
+        ()
+
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |
    +-----------------------------------------------------------------+ *)
@@ -381,6 +506,11 @@ type action =
   | Copy
   | Kill
   | Yank
+  | Capitalize_word
+  | Lowercase_word
+  | Uppercase_word
+  | Next_word
+  | Prev_word
 
 let get_action = function
   | Newline -> newline
@@ -404,6 +534,11 @@ let get_action = function
   | Copy -> copy
   | Kill -> kill
   | Yank -> yank
+  | Capitalize_word -> capitalize_word
+  | Lowercase_word -> lowercase_word
+  | Uppercase_word -> uppercase_word
+  | Next_word -> next_word
+  | Prev_word -> prev_word
 
 let doc_of_action = function
   | Newline -> "insert a newline character."
@@ -427,6 +562,11 @@ let doc_of_action = function
   | Copy -> "copy the current region to the clipboard."
   | Kill -> "cut the current region to the clipboard."
   | Yank -> "paste the contents of the clipboard at current position."
+  | Capitalize_word -> "capitalize the first word after the cursor."
+  | Lowercase_word -> "convert the first word after the cursor to lowercase."
+  | Uppercase_word -> "convert the first word after the cursor to uppercase."
+  | Next_word -> "move the cursor to the end of the next word."
+  | Prev_word -> "move the cursor to the beginning of the previous word."
 
 let actions = [
   Newline, "newline";
@@ -450,6 +590,9 @@ let actions = [
   Copy, "copy";
   Kill, "kill";
   Yank, "yank";
+  Capitalize_word, "capitalize-word";
+  Lowercase_word, "lowercase-word";
+  Uppercase_word, "uppercase-word";
 ]
 
 let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)

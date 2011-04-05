@@ -712,7 +712,7 @@ module Text = struct
   let nth rope idx = Zip.make_f rope idx
   let next rope zip = Zip.move 1 zip
   let prev rope zip = Zip.move (-1) zip
-  let out_of_range rope zip = not (Zip.at_eos zip)
+  let out_of_range rope zip = Zip.at_eos zip
 
   let iter = iter
   let compare = compare

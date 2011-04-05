@@ -23,7 +23,13 @@ type clipboard = {
   (** Sets the contents of the clipboard. *)
 }
 
-val create : ?editable : (int -> bool) -> ?move : (int -> int -> int) -> ?clipboard : clipboard -> unit -> 'a t
+val create :
+  ?editable : (int -> bool) ->
+  ?move : (int -> int -> int) ->
+  ?clipboard : clipboard ->
+  ?match_word : (Zed_rope.t -> int -> int option) ->
+  ?locale : string option signal ->
+  unit -> 'a t
   (** [create ?editable ?move ?clipboard ()] creates a new edition
       engine in the initial state.
 
@@ -36,7 +42,17 @@ val create : ?editable : (int -> bool) -> ?move : (int -> int -> int) -> ?clipbo
       cursor. It defaults to [fun pos delta -> pos + delta].
 
       [clipboard] is the clipboard to use for this engine. If none is
-      defined, a new one using a reference is created. *)
+      defined, a new one using a reference is created.
+
+      [match_word] is used to recognize words. It must returns the end
+      of the matched word if any.
+
+      [locale] is the locale of this buffer. It is used for case
+      mapping. *)
+
+val match_by_regexp : Zed_re.t -> Zed_rope.t -> int -> int option
+  (** [match_by_regexp re] creates a word-matching function using a
+      regular expression. *)
 
 (** {6 State} *)
 
@@ -248,6 +264,25 @@ val yank : 'a context -> unit
   (** [yank ctx] inserts the contents of the clipboard at current
       position. *)
 
+val capitalize_word : 'a context -> unit
+  (** [capitalize_word ctx] capitalizes the first word after the
+      cursor. *)
+
+val lowercase_word : 'a context -> unit
+  (** [lowercase_word ctx] converts the first word after the cursor to
+      lowercase. *)
+
+val uppercase_word : 'a context -> unit
+  (** [uppercase_word ctx] converts the first word after the cursor to
+      uppercase. *)
+
+val next_word : 'a context -> unit
+  (** [next_word ctx] moves the cursor to the end of the next word. *)
+
+val prev_word : 'a context -> unit
+  (** [prev_word ctx] moves the cursor to the beginning of the
+      previous word. *)
+
 (** {6 Action by names} *)
 
 (** Type of action requiring no parameters. *)
@@ -273,6 +308,11 @@ type action =
   | Copy
   | Kill
   | Yank
+  | Capitalize_word
+  | Lowercase_word
+  | Uppercase_word
+  | Next_word
+  | Prev_word
 
 val get_action : action -> ('a context -> unit)
   (** [get_action action] returns the function associated to the given
