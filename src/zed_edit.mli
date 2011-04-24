@@ -149,9 +149,14 @@ val goto : 'a context -> ?set_wanted_column : bool -> int -> unit
       column. *)
 
 val move : 'a context -> ?set_wanted_column : bool -> int -> unit
-  (** [move ctx delta] moves the cursor by the given number of
-      characters. It raises {!Zed_cursor.Out_of_bounds} if the current
-      plus [delta] is outside the bounds of the text. *)
+  (** [move ctx ?set_wanted_column delta] moves the cursor by the
+      given number of characters. It raises
+      {!Zed_cursor.Out_of_bounds} if the current plus [delta] is
+      outside the bounds of the text. *)
+
+val move_line : 'a context -> int -> unit
+  (** [move_line ctx ?set_wanted_column delta] moves the cursor by the
+      given number of lines. *)
 
 val position : 'a context -> int
   (** [position ctx] returns the position of the cursor. *)

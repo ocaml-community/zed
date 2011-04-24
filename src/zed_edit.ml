@@ -175,6 +175,40 @@ let move ctx ?set_wanted_column delta =
   else
     Zed_cursor.move ctx.cursor ?set_wanted_column delta
 
+let next_line_n ctx n =
+  let index = Zed_cursor.get_line ctx.cursor in
+  if index + n > Zed_lines.count ctx.edit.lines then
+    goto ctx ~set_wanted_column:false (Zed_rope.length ctx.edit.text)
+  else begin
+    let start = Zed_lines.line_start ctx.edit.lines (index + n) in
+    let stop =
+      if index + n = Zed_lines.count ctx.edit.lines then
+        Zed_rope.length ctx.edit.text
+      else
+        Zed_lines.line_start ctx.edit.lines (index + n + 1) - 1
+    in
+    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+  end
+
+let prev_line_n ctx n =
+  let index = Zed_cursor.get_line ctx.cursor in
+  if index - n < 0 then begin
+    goto ctx ~set_wanted_column:false 0
+  end else begin
+    let start = Zed_lines.line_start ctx.edit.lines (index - n) in
+    let stop = Zed_lines.line_start ctx.edit.lines (index - (n - 1)) - 1 in
+    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+  end
+
+let move_line ctx delta =
+  match delta with
+    | _ when delta < 0 ->
+        prev_line_n ctx (-delta)
+    | _ when delta > 0 ->
+        next_line_n ctx delta
+    | _ ->
+        ()
+
 let position ctx =
   Zed_cursor.get_position ctx.cursor
 
