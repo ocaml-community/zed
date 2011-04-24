@@ -39,7 +39,7 @@ type 'a t = {
   set_erase_mode : bool -> unit;
   (* The current erase mode. *)
 
-  editable : int -> bool;
+  editable : int -> int -> bool;
   (* The editable function of the engine. *)
 
   move : int -> int -> int;
@@ -84,7 +84,7 @@ let regexp_word =
   let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
   Zed_re.compile (`Repn(`Set set, 1, None))
 
-let create ?(editable=fun pos -> true) ?(move=(+)) ?clipboard ?(match_word=match_by_regexp regexp_word) ?(locale=S.const None) () =
+let create ?(editable=fun pos len -> true) ?(move=(+)) ?clipboard ?(match_word=match_by_regexp regexp_word) ?(locale=S.const None) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
@@ -203,7 +203,7 @@ let at_eot ctx =
 
 let insert ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
-  if not ctx.check || ctx.edit.editable position then begin
+  if not ctx.check || ctx.edit.editable position 0 then begin
     let len = Zed_rope.length rope in
     if S.value ctx.edit.erase_mode then begin
       let text_len = Zed_rope.length ctx.edit.text in
@@ -227,7 +227,7 @@ let insert ctx rope =
 
 let insert_no_erase ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
-  if not ctx.check || ctx.edit.editable position then begin
+  if not ctx.check || ctx.edit.editable position 0 then begin
     let len = Zed_rope.length rope in
     ctx.edit.text <- Zed_rope.insert ctx.edit.text position rope;
     ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
@@ -237,7 +237,7 @@ let insert_no_erase ctx rope =
 
 let remove ctx len =
   let position = Zed_cursor.get_position ctx.cursor in
-  if not ctx.check || ctx.edit.editable position then begin
+  if not ctx.check || ctx.edit.editable position len then begin
     let text_len = Zed_rope.length ctx.edit.text in
     if position + len > text_len then begin
       ctx.edit.text <- Zed_rope.remove ctx.edit.text position (text_len - position);

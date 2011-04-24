@@ -24,7 +24,7 @@ type clipboard = {
 }
 
 val create :
-  ?editable : (int -> bool) ->
+  ?editable : (int -> int -> bool) ->
   ?move : (int -> int -> int) ->
   ?clipboard : clipboard ->
   ?match_word : (Zed_rope.t -> int -> int option) ->
@@ -34,7 +34,8 @@ val create :
       engine in the initial state.
 
       [editable] is used to determine whether the text at given
-      position is editable or not.
+      position is editable or not. It takes as argument the position
+      and the length of the text to remove.
 
       [move] is used to alter deplacement of the cursor. It receive
       the current position of the cursor, a distance to move (which
