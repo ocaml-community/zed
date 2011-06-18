@@ -1,9 +1,0 @@
-# OASIS_START
-# DO NOT EDIT (digest: 7f8e876ca2c4aa477889a609a5608760)
-src/Zed_utf8
-src/Zed_rope
-src/Zed_edit
-src/Zed_cursor
-src/Zed_lines
-src/Zed_re
-# OASIS_STOP
