@@ -138,6 +138,14 @@ let selection engine = engine.selection
 let get_selection engine = S.value engine.selection
 let set_selection engine state = engine.set_selection state
 
+let update engine cursors =
+  E.select (
+    E.stamp engine.changes ()
+    :: E.stamp (S.changes engine.selection) ()
+    :: E.stamp (S.changes (Zed_cursor.position engine.mark)) ()
+    :: List.map (fun cursor -> E.stamp (S.changes (Zed_cursor.position cursor)) ()) cursors
+  )
+
 (* +-----------------------------------------------------------------+
    | Cursors                                                         |
    +-----------------------------------------------------------------+ *)

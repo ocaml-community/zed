@@ -82,6 +82,10 @@ val changes : 'a t -> (int * int * int) event
       number of characters added and [removed] is the number of
       characters removed. *)
 
+val update : 'a t -> Zed_cursor.t list -> unit event
+  (** [update edit cursors] returns an event which occurs each the
+      rendering of the engine should be updated. *)
+
 val erase_mode : 'a t -> bool signal
   (** [erase_mode edit] returns the ``erase'' mode of the buffer. In
       this mode character inserted in the buffer erase existing
