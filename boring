@@ -1,5 +1,4 @@
 (^|/)_build($|/)
 ^zed-.*\.tar\.gz$
-^setup\.ml$
 ^setup\.data$
 ^setup\.log$
