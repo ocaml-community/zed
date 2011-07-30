@@ -522,6 +522,25 @@ let prev_word ctx =
     | None ->
         ()
 
+let delete_next_word ctx =
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+      remove ctx (idx2-idx1)
+    | None ->
+        ()
+
+let delete_prev_word ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
+  match search_word_backward ctx with
+    | Some(idx1, idx2) ->
+      begin
+        goto ctx idx1;
+        remove ctx (position-idx1)
+      end
+    | None ->
+      ()
+      
+
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |
    +-----------------------------------------------------------------+ *)
@@ -553,6 +572,8 @@ type action =
   | Uppercase_word
   | Next_word
   | Prev_word
+  | Delete_next_word
+  | Delete_prev_word
 
 let get_action = function
   | Newline -> newline
@@ -581,6 +602,8 @@ let get_action = function
   | Uppercase_word -> uppercase_word
   | Next_word -> next_word
   | Prev_word -> prev_word
+  | Delete_next_word -> delete_next_word
+  | Delete_prev_word -> delete_prev_word
 
 let doc_of_action = function
   | Newline -> "insert a newline character."
@@ -609,6 +632,8 @@ let doc_of_action = function
   | Uppercase_word -> "convert the first word after the cursor to uppercase."
   | Next_word -> "move the cursor to the end of the next word."
   | Prev_word -> "move the cursor to the beginning of the previous word."
+  | Delete_next_word -> "delete up until the next non-word character."
+  | Delete_prev_word -> "delete the word behind the cursor."
 
 let actions = [
   Newline, "newline";
@@ -635,6 +660,10 @@ let actions = [
   Capitalize_word, "capitalize-word";
   Lowercase_word, "lowercase-word";
   Uppercase_word, "uppercase-word";
+  Next_word, "next-word";
+  Prev_word, "prev-word";
+  Delete_next_word, "delete-next-word";
+  Delete_prev_word, "delete-prev-word"
 ]
 
 let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)

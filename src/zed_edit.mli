@@ -323,6 +323,8 @@ type action =
   | Uppercase_word
   | Next_word
   | Prev_word
+  | Delete_next_word
+  | Delete_prev_word
 
 val get_action : action -> ('a context -> unit)
   (** [get_action action] returns the function associated to the given
