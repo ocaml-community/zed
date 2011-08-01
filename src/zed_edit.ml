@@ -287,6 +287,18 @@ let remove ctx len =
     ctx.edit.send_changes (position, 0, len);
   end
 
+let replace ctx len rope =
+  let position = Zed_cursor.get_position ctx.cursor in
+  let text_len = Zed_rope.length ctx.edit.text in
+  let len = if position + len > text_len then text_len - position else len in
+  if not ctx.check || ctx.edit.editable position len then begin
+    let rope_len = Zed_rope.length rope in
+    ctx.edit.text <- Zed_rope.replace ctx.edit.text position len rope;
+    ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len (Zed_lines.of_rope rope);
+    ctx.edit.send_changes (position, rope_len, len);
+    move ctx rope_len
+  end
+
 let newline_rope =
   Zed_rope.singleton (UChar.of_char '\n')
 
@@ -470,11 +482,13 @@ let capitalize_word ctx =
         goto ctx idx1;
         if Zed_cursor.get_position ctx.cursor = idx1 && idx1 < idx2 then begin
           let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          remove ctx (Zed_rope.length str);
-          let ch, str = Zed_rope.break str 1 in
-          insert_no_erase ctx (Zed_rope.append
-                                 (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) ch)
-                                 (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str))
+          let ch, str' = Zed_rope.break str 1 in
+          replace
+            ctx
+            (Zed_rope.length str)
+            (Zed_rope.append
+               (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) ch)
+               (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str'))
         end
     | None ->
         ()
@@ -485,8 +499,10 @@ let lowercase_word ctx =
         goto ctx idx1;
         if Zed_cursor.get_position ctx.cursor = idx1 then begin
           let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          remove ctx (Zed_rope.length str);
-          insert_no_erase ctx (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str)
+          replace
+            ctx
+            (Zed_rope.length str)
+            (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str)
         end
     | None ->
         ()
@@ -497,8 +513,10 @@ let uppercase_word ctx =
         goto ctx idx1;
         if Zed_cursor.get_position ctx.cursor = idx1 then begin
           let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          remove ctx (Zed_rope.length str);
-          insert_no_erase ctx (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) str)
+          replace
+            ctx
+            (Zed_rope.length str)
+            (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) str)
         end
     | None ->
         ()

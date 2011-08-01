@@ -190,10 +190,24 @@ val at_eot : 'a context -> bool
 val insert : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
 
+val insert_no_erase : 'a context -> Zed_rope.t -> unit
+  (** [insert ctx rope] inserts the given rope at current position but
+      do not erase text if the buffer is currently in erase mode. *)
+
 val remove : 'a context -> int -> unit
   (** [remove ctx n] removes [n] characters at current position. If
       there is less than [n] characters a current position, it removes
       everything until the end of the text. *)
+
+val replace : 'a context -> int -> Zed_rope.t -> unit
+  (** [replace ctx n rope] does the same as:
+
+      {[
+        remove ctx n;
+        insert_no_erase ctx rope
+      ]}
+
+      but in one atomic operation. *)
 
 val newline : 'a context -> unit
   (** Insert a newline character. *)
