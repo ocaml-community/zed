@@ -523,9 +523,10 @@ let prev_word ctx =
         ()
 
 let delete_next_word ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
   match search_word_forward ctx with
     | Some(idx1, idx2) ->
-      remove ctx (idx2-idx1)
+        remove ctx (idx2 - position)
     | None ->
         ()
 
@@ -533,13 +534,11 @@ let delete_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_backward ctx with
     | Some(idx1, idx2) ->
-      begin
         goto ctx idx1;
-        remove ctx (position-idx1)
-      end
+        if Zed_cursor.get_position ctx.cursor = idx1 then
+          remove ctx (position - idx1)
     | None ->
-      ()
-      
+        ()
 
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |
