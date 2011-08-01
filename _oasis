@@ -30,7 +30,8 @@ Library zed
     Zed_edit,
     Zed_cursor,
     Zed_lines,
-    Zed_re
+    Zed_re,
+    Zed_input
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
