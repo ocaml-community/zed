@@ -97,6 +97,12 @@ let regexp_word =
   let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
   Zed_re.compile (`Repn(`Set set, 1, None))
 
+let new_clipboard () =
+  let r = ref Zed_rope.empty in
+  { clipboard_get = (fun () -> !r);
+    clipboard_set = (fun x -> r := x) }
+
+
 let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) ?(undo_size = 1000) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
@@ -106,9 +112,7 @@ let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word
       | Some clipboard ->
           clipboard
       | None ->
-          let r = ref Zed_rope.empty in
-          { clipboard_get = (fun () -> !r);
-            clipboard_set = (fun x -> r := x) }
+          new_clipboard ()
   in
   let rec edit = {
     data = None;

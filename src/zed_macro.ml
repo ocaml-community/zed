@@ -14,28 +14,55 @@ type 'a t = {
   set_recording : bool -> unit;
   mutable tmp_macro : 'a list;
   mutable macro : 'a list;
+  count : int signal;
+  set_count : int -> unit;
 }
 
 let create macro =
   let recording, set_recording = S.create false in
-  { recording; set_recording; macro; tmp_macro = [] }
+  let count, set_count = S.create 0 in
+  {
+    recording;
+    set_recording;
+    macro;
+    tmp_macro = [];
+    count;
+    set_count;
+  }
 
 let recording r = r.recording
 
 let get_recording r = S.value r.recording
 
 let set_recording r state =
-  if state <> S.value r.recording then
-    match state with
-      | true ->
-          r.tmp_macro <- [];
-          r.set_recording true
-      | false ->
+  match state with
+    | true ->
+        r.tmp_macro <- [];
+        r.set_recording true;
+        r.set_count 0
+    | false ->
+        if S.value r.recording then begin
           r.macro <- List.rev r.tmp_macro;
-          r.set_recording false
+          r.tmp_macro <- [];
+          r.set_recording false;
+          r.set_count 0
+        end
+
+let cancel r =
+  if S.value r.recording then begin
+    r.tmp_macro <- [];
+    r.set_recording false;
+    r.set_count 0
+  end
+
+let count r = r.count
+
+let get_count r = S.value r.count
 
 let add r x =
-  if S.value r.recording then
-    r.tmp_macro <- x :: r.tmp_macro
+  if S.value r.recording then begin
+    r.tmp_macro <- x :: r.tmp_macro;
+    r.set_count (S.value r.count + 1)
+  end
 
 let contents r = r.macro

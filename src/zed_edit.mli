@@ -24,6 +24,9 @@ type clipboard = {
   (** Sets the contents of the clipboard. *)
 }
 
+val new_clipboard : unit -> clipboard
+  (** [new_clipboard ()] creates a new clipboard using a reference. *)
+
 val create :
   ?editable : (int -> int -> bool) ->
   ?move : (int -> int -> int) ->

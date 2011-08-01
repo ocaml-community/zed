@@ -25,6 +25,16 @@ val get_recording : 'a t -> bool
 val set_recording : 'a t -> bool -> unit
   (** Starts or stops the macro recorder. *)
 
+val cancel : 'a t -> unit
+  (** Cancels the current macro if recording one. *)
+
+val count : 'a t -> int React.signal
+  (** The number of actions in the macro recorder. It is [0] if the
+      recorder is not currently recording. *)
+
+val get_count : 'a t -> int
+  (** Returns the current number of actions in the macro recorder. *)
+
 val add : 'a t -> 'a -> unit
   (** [add recorder x] adds [x] to the recorder if it is recording a
       macro. *)
