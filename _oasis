@@ -31,7 +31,8 @@ Library zed
     Zed_cursor,
     Zed_lines,
     Zed_re,
-    Zed_input
+    Zed_input,
+    Zed_macro
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
