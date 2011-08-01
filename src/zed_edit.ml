@@ -558,6 +558,7 @@ let delete_prev_word ctx =
    +-----------------------------------------------------------------+ *)
 
 type action =
+  | Insert of UChar.t
   | Newline
   | Next_char
   | Prev_char
@@ -588,6 +589,7 @@ type action =
   | Delete_prev_word
 
 let get_action = function
+  | Insert ch -> (fun ctx -> insert ctx (Zed_rope.singleton ch))
   | Newline -> newline
   | Next_char -> next_char
   | Prev_char -> prev_char
@@ -618,6 +620,7 @@ let get_action = function
   | Delete_prev_word -> delete_prev_word
 
 let doc_of_action = function
+  | Insert _ -> "insert the given character."
   | Newline -> "insert a newline character."
   | Next_char -> "move the cursor to the next character."
   | Prev_char -> "move the cursor to the previous character."
@@ -681,10 +684,34 @@ let actions = [
 let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)
 let names_to_actions = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare n1 n2) actions)
 
+let parse_insert x =
+  if Zed_utf8.starts_with x "insert(" && Zed_utf8.ends_with x ")" then begin
+    let str = String.sub x 7 (String.length x - 8) in
+    if String.length str = 1 && Char.code str.[0] < 128 then
+      Insert(UChar.of_char str.[0])
+    else if String.length str > 2 && str.[0] = 'U' && str.[1] = '+' then
+      let acc = ref 0 in
+      for i = 2 to String.length str - 1 do
+        let ch = str.[i] in
+        acc := !acc * 16 + (match ch with
+                              | '0' .. '9' -> Char.code ch - Char.code '0'
+                              | 'a' .. 'f' -> Char.code ch - Char.code 'a' + 10
+                              | 'A' .. 'F' -> Char.code ch - Char.code 'A' + 10
+                              | _ -> raise Not_found)
+      done;
+      try
+        Insert(UChar.of_int !acc)
+      with _ ->
+        raise Not_found
+    else
+      raise Not_found
+  end else
+    raise Not_found
+
 let action_of_name x =
   let rec loop a b =
     if a = b then
-      raise Not_found
+      parse_insert x
     else
       let c = (a + b) / 2 in
       let action, name = Array.unsafe_get names_to_actions c in
@@ -713,4 +740,19 @@ let name_of_action x =
         | _ ->
             name
   in
-  loop 0 (Array.length actions_to_names)
+  match x with
+    | Insert ch ->
+        let code = UChar.code ch in
+        if code <= 255 then
+          let ch = Char.chr (UChar.code ch) in
+          match ch with
+            | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
+                Printf.sprintf "insert(%c)" ch
+            | _ ->
+                Printf.sprintf "insert(U+%02x)" code
+        else if code <= 0xffff then
+          Printf.sprintf "insert(U+%04x)" code
+        else
+          Printf.sprintf "insert(U+%06x)" code
+    | _ ->
+        loop 0 (Array.length actions_to_names)

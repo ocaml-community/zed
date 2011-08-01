@@ -9,6 +9,7 @@
 
 (** Edition engines *)
 
+open CamomileLibrary
 open React
 
 type 'a t
@@ -309,8 +310,9 @@ val prev_word : 'a context -> unit
 
 (** {6 Action by names} *)
 
-(** Type of action requiring no parameters. *)
+(** Type of actions. *)
 type action =
+  | Insert of UChar.t
   | Newline
   | Next_char
   | Prev_char
@@ -345,7 +347,7 @@ val get_action : action -> ('a context -> unit)
       action. *)
 
 val actions : (action * string) list
-  (** List of actions with their names. *)
+  (** List of actions with their names, except {!Insert}. *)
 
 val doc_of_action : action -> string
   (** [doc_of_action action] returns a short description of the
@@ -355,7 +357,13 @@ val action_of_name : string -> action
   (** [action_of_name str] converts the given action name into an
       action. Action name are the same as function name but with '_'
       replaced by '-'. It raises [Not_found] if the name does not
-      correspond to an action. *)
+      correspond to an action.
+
+      [Insert ch] is represented by "insert(<char>)" where [<char>] is:
+
+      * a literal ascii character, such as "a", "b", ...
+      * a unicode character, written "U+<code>", such as "U+0041"
+  *)
 
 val name_of_action : action -> string
   (** [name_of_action act] returns the name of the given action. *)
