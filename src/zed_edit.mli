@@ -30,6 +30,7 @@ val create :
   ?clipboard : clipboard ->
   ?match_word : (Zed_rope.t -> int -> int option) ->
   ?locale : string option signal ->
+  ?undo_size : int ->
   unit -> 'a t
   (** [create ?editable ?move ?clipboard ()] creates a new edition
       engine in the initial state.
@@ -47,7 +48,10 @@ val create :
       of the matched word if any.
 
       [locale] is the locale of this buffer. It is used for case
-      mapping. *)
+      mapping.
+
+      [undo_size] is the size of the undo buffer. It is the number of
+      state zed will remember. It defaults to [1000]. *)
 
 val match_by_regexp : Zed_re.t -> Zed_rope.t -> int -> int option
   (** [match_by_regexp re] creates a word-matching function using a
@@ -199,10 +203,19 @@ val insert_no_erase : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position but
       do not erase text if the buffer is currently in erase mode. *)
 
+val remove_next : 'a context -> int -> unit
+  (** [remove_next ctx n] removes [n] characters at current
+      position. If there is less than [n] characters at current
+      position, it removes everything until the end of the text. *)
+
+val remove_prev : 'a context -> int -> unit
+  (** [remove_prev ctx n] removes [n] characters before current
+      position. If there is less than [n] characters before current
+      position, it removes everything until the beginning of the
+      text. *)
+
 val remove : 'a context -> int -> unit
-  (** [remove ctx n] removes [n] characters at current position. If
-      there is less than [n] characters a current position, it removes
-      everything until the end of the text. *)
+  (** Alias for {!remove_next} *)
 
 val replace : 'a context -> int -> Zed_rope.t -> unit
   (** [replace ctx n rope] does the same as:
@@ -326,6 +339,9 @@ val kill_prev_word : 'a context -> unit
   (** [kill_prev_word ctx] deletes the word before the cursor and save
       it to the clipboard. *)
 
+val undo : 'a context -> unit
+  (** [undo ctx] reverts the last performed action. *)
+
 (** {6 Action by names} *)
 
 (** Type of actions. *)
@@ -361,6 +377,7 @@ type action =
   | Delete_prev_word
   | Kill_next_word
   | Kill_prev_word
+  | Undo
 
 val get_action : action -> ('a context -> unit)
   (** [get_action action] returns the function associated to the given
