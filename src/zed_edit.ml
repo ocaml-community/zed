@@ -545,6 +545,27 @@ let delete_prev_word ctx =
     | None ->
         ()
 
+let kill_next_word ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
+  match search_word_forward ctx with
+    | Some(idx1, idx2) ->
+        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (idx2 - position));
+        ctx.edit.set_selection false;
+        remove ctx (idx2 - position)
+    | None ->
+        ()
+
+let kill_prev_word ctx =
+  let position = Zed_cursor.get_position ctx.cursor in
+  match search_word_backward ctx with
+    | Some(idx1, idx2) ->
+        goto ctx idx1;
+        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text idx1 (position - idx1));
+        ctx.edit.set_selection false;
+        remove ctx (position - idx1)
+    | None ->
+        ()
+
 (* +-----------------------------------------------------------------+
    | Action by names                                                 |
    +-----------------------------------------------------------------+ *)
@@ -579,6 +600,8 @@ type action =
   | Prev_word
   | Delete_next_word
   | Delete_prev_word
+  | Kill_next_word
+  | Kill_prev_word
 
 let get_action = function
   | Insert ch -> (fun ctx -> insert ctx (Zed_rope.singleton ch))
@@ -610,6 +633,8 @@ let get_action = function
   | Prev_word -> prev_word
   | Delete_next_word -> delete_next_word
   | Delete_prev_word -> delete_prev_word
+  | Kill_next_word -> kill_next_word
+  | Kill_prev_word -> kill_prev_word
 
 let doc_of_action = function
   | Insert _ -> "insert the given character."
@@ -641,6 +666,8 @@ let doc_of_action = function
   | Prev_word -> "move the cursor to the beginning of the previous word."
   | Delete_next_word -> "delete up until the next non-word character."
   | Delete_prev_word -> "delete the word behind the cursor."
+  | Kill_next_word -> "cut up until the next non-word character."
+  | Kill_prev_word -> "cut the word behind the cursor."
 
 let actions = [
   Newline, "newline";
@@ -670,7 +697,9 @@ let actions = [
   Next_word, "next-word";
   Prev_word, "prev-word";
   Delete_next_word, "delete-next-word";
-  Delete_prev_word, "delete-prev-word"
+  Delete_prev_word, "delete-prev-word";
+  Kill_next_word, "kill-next-word";
+  Kill_prev_word, "kill-prev-word";
 ]
 
 let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)

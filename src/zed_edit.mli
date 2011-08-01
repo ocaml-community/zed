@@ -312,6 +312,20 @@ val prev_word : 'a context -> unit
   (** [prev_word ctx] moves the cursor to the beginning of the
       previous word. *)
 
+val delete_next_word : 'a context -> unit
+  (** [delete_next_word ctx] deletes the word after the cursor. *)
+
+val delete_prev_word : 'a context -> unit
+  (** [delete_prev_word ctx] deletes the word before the cursor. *)
+
+val kill_next_word : 'a context -> unit
+  (** [kill_next_word ctx] deletes the word after the cursor and save
+      it to the clipboard. *)
+
+val kill_prev_word : 'a context -> unit
+  (** [kill_prev_word ctx] deletes the word before the cursor and save
+      it to the clipboard. *)
+
 (** {6 Action by names} *)
 
 (** Type of actions. *)
@@ -345,6 +359,8 @@ type action =
   | Prev_word
   | Delete_next_word
   | Delete_prev_word
+  | Kill_next_word
+  | Kill_prev_word
 
 val get_action : action -> ('a context -> unit)
   (** [get_action action] returns the function associated to the given
