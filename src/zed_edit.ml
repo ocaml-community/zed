@@ -42,9 +42,6 @@ type 'a t = {
   editable : int -> int -> bool;
   (* The editable function of the engine. *)
 
-  move : int -> int -> int;
-  (* The move function of the engine. *)
-
   clipboard : clipboard;
   (* The clipboard for this engine. *)
 
@@ -84,7 +81,7 @@ let regexp_word =
   let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
   Zed_re.compile (`Repn(`Set set, 1, None))
 
-let create ?(editable=fun pos len -> true) ?(move=(+)) ?clipboard ?(match_word=match_by_regexp regexp_word) ?(locale=S.const None) () =
+let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
@@ -106,7 +103,6 @@ let create ?(editable=fun pos len -> true) ?(move=(+)) ?clipboard ?(match_word=m
     erase_mode;
     set_erase_mode;
     editable;
-    move;
     clipboard;
     mark = dummy_cursor;
     selection;
@@ -175,17 +171,10 @@ let check ctx = ctx.check
 let with_check check ctx = { ctx with check }
 
 let goto ctx ?set_wanted_column new_position =
-  if ctx.check then
-    let position = Zed_cursor.get_position ctx.cursor in
-    Zed_cursor.goto ctx.cursor ?set_wanted_column (ctx.edit.move position (new_position - position))
-  else
-    Zed_cursor.goto ctx.cursor ?set_wanted_column new_position
+  Zed_cursor.goto ctx.cursor ?set_wanted_column new_position
 
 let move ctx ?set_wanted_column delta =
-  if ctx.check then
-    Zed_cursor.goto ctx.cursor ?set_wanted_column (ctx.edit.move (Zed_cursor.get_position ctx.cursor) delta)
-  else
-    Zed_cursor.move ctx.cursor ?set_wanted_column delta
+  Zed_cursor.move ctx.cursor ?set_wanted_column delta
 
 let next_line_n ctx n =
   let index = Zed_cursor.get_line ctx.cursor in
@@ -387,8 +376,7 @@ let delete_prev_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let start = Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor) in
   goto ctx start;
-  let new_position = Zed_cursor.get_position ctx.cursor in
-  if new_position < position then remove ctx (position - new_position)
+  remove ctx (position - start)
 
 let kill_next_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
@@ -408,12 +396,9 @@ let kill_prev_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let start = Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor) in
   goto ctx start;
-  let new_position = Zed_cursor.get_position ctx.cursor in
-  if new_position <= position then begin
-    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text new_position (position - new_position));
-    ctx.edit.set_selection false;
-    remove ctx (position - new_position)
-  end
+  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text start (position - start));
+  ctx.edit.set_selection false;
+  remove ctx (position - start)
 
 let switch_erase_mode ctx =
   ctx.edit.set_erase_mode (not (S.value ctx.edit.erase_mode))
@@ -556,8 +541,7 @@ let delete_prev_word ctx =
   match search_word_backward ctx with
     | Some(idx1, idx2) ->
         goto ctx idx1;
-        if Zed_cursor.get_position ctx.cursor = idx1 then
-          remove ctx (position - idx1)
+        remove ctx (position - idx1)
     | None ->
         ()
 

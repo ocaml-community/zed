@@ -38,10 +38,7 @@ val create :
       position is editable or not. It takes as argument the position
       and the length of the text to remove.
 
-      [move] is used to alter deplacement of the cursor. It receive
-      the current position of the cursor, a distance to move (which
-      can be negative) and must returns the new position of the
-      cursor. It defaults to [fun pos delta -> pos + delta].
+      [move] is unused.
 
       [clipboard] is the clipboard to use for this engine. If none is
       defined, a new one using a reference is created.
@@ -136,8 +133,7 @@ val context : ?check : bool -> 'a t -> Zed_cursor.t -> 'a context
       parameters. [cursor] is the cursor that will be used for all
       modification of the text. If [check] is [true] (the default)
       then all modification of the text will be checked with the
-      [editable] function of the engine and all movement will be
-      passed through the [move] function of the engine. *)
+      [editable] function of the engine. *)
 
 val edit : 'a context -> 'a t
   (** [edit ctx] returns the edition engine used by the given
