@@ -279,17 +279,12 @@ let insert_no_erase ctx rope =
 
 let remove ctx len =
   let position = Zed_cursor.get_position ctx.cursor in
+  let text_len = Zed_rope.length ctx.edit.text in
+  let len = if position + len > text_len then text_len - position else len in
   if not ctx.check || ctx.edit.editable position len then begin
-    let text_len = Zed_rope.length ctx.edit.text in
-    if position + len > text_len then begin
-      ctx.edit.text <- Zed_rope.remove ctx.edit.text position (text_len - position);
-      ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position (text_len - position);
-      ctx.edit.send_changes (position, 0, text_len - position)
-    end else begin
-      ctx.edit.text <- Zed_rope.remove ctx.edit.text position len;
-      ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
-      ctx.edit.send_changes (position, 0, len);
-    end
+    ctx.edit.text <- Zed_rope.remove ctx.edit.text position len;
+    ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
+    ctx.edit.send_changes (position, 0, len);
   end
 
 let newline_rope =
