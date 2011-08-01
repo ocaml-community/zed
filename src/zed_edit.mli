@@ -146,6 +146,10 @@ val check : 'a context -> bool
   (** [check ctx] returns whether the context has been created with
       the [check] flag. *)
 
+val with_check : bool -> 'a context -> 'a context
+  (** [with_check check ctx] retuns [ctx] with the check flag set to
+      [check]. *)
+
 val goto : 'a context -> ?set_wanted_column : bool -> int -> unit
   (** [goto ctx ?set_column position] moves the cursor to the given
       position. It raises {!Zed_cursor.Out_of_bounds} if the position

@@ -170,6 +170,8 @@ let edit ctx = ctx.edit
 let cursor ctx = ctx.cursor
 let check ctx = ctx.check
 
+let with_check check ctx = { ctx with check }
+
 let goto ctx ?set_wanted_column new_position =
   if ctx.check then
     let position = Zed_cursor.get_position ctx.cursor in
