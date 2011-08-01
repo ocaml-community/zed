@@ -123,6 +123,10 @@ val new_cursor : 'a t -> Zed_cursor.t
 
 (** {6 Actions} *)
 
+exception Cannot_edit
+  (** Exception raised when trying to edit a non-editable portion of a
+      buffer. *)
+
 type 'a context
   (** Type of contexts. Contexts are used to modify an edition
       buffer. *)

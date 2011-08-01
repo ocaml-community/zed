@@ -157,6 +157,8 @@ let new_cursor engine =
    | Actions                                                         |
    +-----------------------------------------------------------------+ *)
 
+exception Cannot_edit
+
 type 'a context = {
   edit : 'a t;
   cursor : Zed_cursor.t;
@@ -267,7 +269,8 @@ let insert ctx rope =
       ctx.edit.send_changes (position, len, 0);
       move ctx len
     end
-  end
+  end else
+    raise Cannot_edit
 
 let insert_no_erase ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
@@ -277,7 +280,8 @@ let insert_no_erase ctx rope =
     ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
     ctx.edit.send_changes (position, len, 0);
     move ctx len
-  end
+  end else
+    raise Cannot_edit
 
 let remove ctx len =
   let position = Zed_cursor.get_position ctx.cursor in
@@ -287,7 +291,8 @@ let remove ctx len =
     ctx.edit.text <- Zed_rope.remove ctx.edit.text position len;
     ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
     ctx.edit.send_changes (position, 0, len);
-  end
+  end else
+    raise Cannot_edit
 
 let replace ctx len rope =
   let position = Zed_cursor.get_position ctx.cursor in
@@ -299,7 +304,8 @@ let replace ctx len rope =
     ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len (Zed_lines.of_rope rope);
     ctx.edit.send_changes (position, rope_len, len);
     move ctx rope_len
-  end
+  end else
+    raise Cannot_edit
 
 let newline_rope =
   Zed_rope.singleton (UChar.of_char '\n')
