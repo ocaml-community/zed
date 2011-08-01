@@ -608,18 +608,24 @@ let kill_prev_word ctx =
     | None ->
         ()
 
-let undo { edit; cursor } =
+let undo { check; edit; cursor } =
   if edit.undo_count > 0 then begin
-    edit.undo_count <- edit.undo_count - 1;
-    if edit.undo_index = 0 then
-      edit.undo_index <- edit.undo_size - 1
-    else
-      edit.undo_index <- edit.undo_index - 1;
-    let text, lines, pos, new_pos, added, removed = edit.undo.(edit.undo_index) in
-    edit.text <- text;
-    edit.lines <- lines;
-    edit.send_changes (pos, removed, added);
-    Zed_cursor.goto cursor new_pos
+    let index =
+      if edit.undo_index = 0 then
+        edit.undo_size - 1
+      else
+        edit.undo_index - 1
+    in
+    let text, lines, pos, new_pos, added, removed = edit.undo.(index) in
+    if not check || edit.editable pos added then begin
+      edit.undo_count <- edit.undo_count - 1;
+      edit.undo_index <- index;
+      edit.text <- text;
+      edit.lines <- lines;
+      edit.send_changes (pos, removed, added);
+      Zed_cursor.goto cursor new_pos
+    end else
+      raise Cannot_edit
   end
 
 (* +-----------------------------------------------------------------+
