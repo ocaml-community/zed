@@ -41,3 +41,15 @@ val add : 'a t -> 'a -> unit
 
 val contents : 'a t -> 'a list
   (** Returns the currently recorded macro. *)
+
+val counter : 'a t -> int React.signal
+  (** The contents of the macro counter. *)
+
+val get_counter : 'a t -> int
+  (** Gets the contents of the macro counter. *)
+
+val set_counter : 'a t -> int -> unit
+  (** Sets the macro counter to the given value. *)
+
+val add_counter : 'a t -> int -> unit
+  (** Adds the given value to the macro counter. *)
