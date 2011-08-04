@@ -534,7 +534,7 @@ module Zip = struct
     else
       let len' = length zip.zip.leaf - zip.pos in
       if len <= len' then
-        Leaf(unsafe_sub zip.zip.str zip.idx (move_utf8_f zip.zip.str zip.idx len), len)
+        Leaf(unsafe_sub zip.zip.str zip.idx (move_utf8_f zip.zip.str zip.idx len - zip.idx), len)
       else
         sub_rec (Leaf(unsafe_sub zip.zip.str zip.idx (String.length zip.zip.str - zip.idx), len')) zip.zip.rest_f (len - len')
 
