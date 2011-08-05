@@ -227,6 +227,12 @@ val rchop : t -> t
   (** [rchop t] returns [t] without is last character. Returns [""] if
       [t = ""]. *)
 
+(** {6 Buffers} *)
+
+val add : Buffer.t -> UChar.t -> unit
+  (** [add buf ch] is the same as [Buffer.add_string buf (singleton
+      ch)] but is more efficient. *)
+
 (** {6 Unsafe offset API} *)
 
 val next : t -> int -> int

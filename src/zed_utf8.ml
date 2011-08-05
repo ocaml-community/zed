@@ -792,6 +792,29 @@ let rchop = function
       unsafe_sub str 0 ofs
 
 (* +-----------------------------------------------------------------+
+   | Buffers                                                         |
+   +-----------------------------------------------------------------+ *)
+
+let add buf char =
+  let code = UChar.code char in
+  if code < 0x80 then
+    Buffer.add_char buf (Char.unsafe_chr code)
+  else if code <= 0x800 then begin
+    Buffer.add_char buf (Char.unsafe_chr ((code lsr 6) lor 0xc0));
+    Buffer.add_char buf (Char.unsafe_chr ((code land 0x3f) lor 0x80))
+  end else if code <= 0x10000 then begin
+    Buffer.add_char buf (Char.unsafe_chr ((code lsr 12) lor 0xe0));
+    Buffer.add_char buf (Char.unsafe_chr (((code lsr 6) land 0x3f) lor 0x80));
+    Buffer.add_char buf (Char.unsafe_chr ((code land 0x3f) lor 0x80))
+  end else if code <= 0x10ffff then begin
+    Buffer.add_char buf (Char.unsafe_chr ((code lsr 18) lor 0xf0));
+    Buffer.add_char buf (Char.unsafe_chr (((code lsr 12) land 0x3f) lor 0x80));
+    Buffer.add_char buf (Char.unsafe_chr (((code lsr 6) land 0x3f) lor 0x80));
+    Buffer.add_char buf (Char.unsafe_chr ((code land 0x3f) lor 0x80))
+  end else
+    invalid_arg "Zed_utf8.add"
+
+(* +-----------------------------------------------------------------+
    | Offset API                                                      |
    +-----------------------------------------------------------------+ *)
 
