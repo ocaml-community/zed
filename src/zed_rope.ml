@@ -687,14 +687,26 @@ let of_string str =
   let len = Zed_utf8.validate str in
   Leaf(str, len)
 
+let rec byte_length rope acc =
+  match rope with
+    | Leaf (text, _) ->
+        acc + String.length text
+    | Node (_, _, rope_l, _, rope_r) ->
+        byte_length rope_r (byte_length rope_l acc)
+
+let rec blit_rope str ofs rope =
+  match rope with
+    | Leaf (text, _) ->
+        let len = String.length text in
+        String.unsafe_blit text 0 str ofs len;
+        ofs + len
+    | Node (_, _, rope_l, _, rope_r) ->
+        blit_rope str (blit_rope str ofs rope_l) rope_r
+
 let to_string rope =
-  let rec collect acc = function
-    | Leaf(text, _) ->
-        text :: acc
-    | Node(_, _, rope_l, _, rope_r) ->
-        collect (collect acc rope_r) rope_l
-  in
-  Zed_utf8.concat "" (collect [] rope)
+  let str = String.create (byte_length rope 0) in
+  ignore (blit_rope str 0 rope);
+  str
 
 (* +-----------------------------------------------------------------+
    | Camomile compatible interface                                   |
