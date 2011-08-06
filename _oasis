@@ -3,8 +3,9 @@
 # +-------------------------------------------------------------------+
 
 OASISFormat: 0.1
+OCamlVersion: >= 3.12
 Name: zed
-Version: 1.0
+Version: 1.1
 LicenseFile: LICENSE
 License: BSD3
 Authors: Jérémie Dimino
