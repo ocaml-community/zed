@@ -401,8 +401,8 @@ val action_of_name : string -> action
 
       [Insert ch] is represented by "insert(<char>)" where [<char>] is:
 
-      * a literal ascii character, such as "a", "b", ...
-      * a unicode character, written "U+<code>", such as "U+0041"
+      - a literal ascii character, such as "a", "b", ...
+      - a unicode character, written "U+< code >", such as "U+0041"
   *)
 
 val name_of_action : action -> string
