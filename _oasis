@@ -12,8 +12,18 @@ Authors: Jérémie Dimino
 Homepage: http://zed.forge.ocamlcore.org/
 BuildTools: ocamlbuild
 Plugins: DevFiles (0.2), META (0.2)
-Synopsis: Zed
-Description: An edition engine for editors, text widgets, ...
+Synopsis: Abstract engine for text edition in OCaml
+Description:
+  Zed is an abstract engine for text edition. It can be used to
+  write text editors, edition widgets, readlines, ...
+  .
+  Zed uses Camomile to fully support the Unicode specification, and
+  implements an UTF-8 encoded string type with validation, and a rope
+  datastructure to achieve efficient operations on large Unicode
+  buffers. Zed also features a regular expression search on ropes.
+  .
+  To support efficient text edition capabilities, Zed provides macro
+  recording and cursor management facilities.
 
 # +-------------------------------------------------------------------+
 # | The library                                                       |
