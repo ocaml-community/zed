@@ -42,6 +42,14 @@ val validate : t -> int
   (** Same as check but raises an exception in case the argument is
       not a valid text, otherwise returns the length of the string. *)
 
+val next_error : t -> int -> int * int * string
+  (** [next_error str ofs] returns [(ofs', count, msg)] where [ofs']
+      is the offset of the start of the first invalid sequence after
+      [ofs] (inclusive) in [str], [count] is the number of unicode
+      character between [ofs] and [ofs'] (exclusive) and [msg] is an
+      error message. If there is no error until the end of string then
+      [ofs] is [String.length str] and [msg] is the empty string. *)
+
 (** {6 Construction} *)
 
 val singleton : UChar.t -> t

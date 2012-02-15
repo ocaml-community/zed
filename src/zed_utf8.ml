@@ -26,12 +26,11 @@ type check_result =
   | Correct of int
   | Message of string
 
-let check s =
-  let fail i msg = Message(Printf.sprintf "at position %d: %s" i msg) in
+let next_error s i =
   let len = String.length s in
   let rec main i ulen =
     if i = len then
-      Correct ulen
+      (i, ulen, "")
     else
       let ch = String.unsafe_get s i in
       match ch with
@@ -39,60 +38,67 @@ let check s =
             main (i + 1) (ulen + 1)
         | '\xc0' .. '\xdf' ->
             if i + 1 >= len then
-              fail len "premature end of UTF8 sequence"
+              (i, ulen, "premature end of UTF8 sequence")
             else begin
               let byte1 = Char.code (String.unsafe_get s (i + 1)) in
               if byte1 land 0xc0 != 0x80 then
-                fail (i + 1) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if ((Char.code ch land 0x1f) lsl 6) lor (byte1 land 0x3f) < 0x80 then
-                fail i "overlong UTF8 sequence"
+                (i, ulen, "overlong UTF8 sequence")
               else
                 main (i + 2) (ulen + 1)
             end
         | '\xe0' .. '\xef' ->
             if i + 2 >= len then
-              fail len "premature end of UTF8 sequence"
+              (i, ulen, "premature end of UTF8 sequence")
             else begin
               let byte1 = Char.code (String.unsafe_get s (i + 1))
               and byte2 = Char.code (String.unsafe_get s (i + 2)) in
               if byte1 land 0xc0 != 0x80 then
-                fail (i + 1) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if byte2 land 0xc0 != 0x80 then
-                fail (i + 2) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if ((Char.code ch land 0x0f) lsl 12) lor ((byte1 land 0x3f) lsl 6) lor (byte2 land 0x3f) < 0x800 then
-                fail i "overlong UTF8 sequence"
+                (i, ulen, "overlong UTF8 sequence")
               else
                 main (i + 3) (ulen + 1)
             end
         | '\xf0' .. '\xf7' ->
             if i + 3 >= len then
-              fail len "premature end of UTF8 sequence"
+              (i, ulen, "premature end of UTF8 sequence")
             else begin
               let byte1 = Char.code (String.unsafe_get s (i + 1))
               and byte2 = Char.code (String.unsafe_get s (i + 2))
               and byte3 = Char.code (String.unsafe_get s (i + 3)) in
               if byte1 land 0xc0 != 0x80 then
-                fail (i + 1) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if byte2 land 0xc0 != 0x80 then
-                fail (i + 2) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if byte3 land 0xc0 != 0x80 then
-                fail (i + 3) "malformed UTF8 sequence"
+                (i, ulen, "malformed UTF8 sequence")
               else if ((Char.code ch land 0x07) lsl 18) lor ((byte1 land 0x3f) lsl 12) lor ((byte2 land 0x3f) lsl 6) lor (byte3 land 0x3f) < 0x10000 then
-                fail i "overlong UTF8 sequence"
+                (i, ulen, "overlong UTF8 sequence")
               else
                 main (i + 4) (ulen + 1)
             end
         | _ ->
-            fail i "invalid start of UTF8 sequence"
+            (i, ulen, "invalid start of UTF8 sequence")
   in
-  main 0 0
+  main i 0
 
-let validate s =
-  match check s with
-    | Correct len ->
-        len
-    | Message error ->
-        raise (Invalid(error, s))
+let check str =
+  let ofs, len, msg = next_error str 0 in
+  if ofs = String.length str then
+    Correct len
+  else
+    Message (Printf.sprintf "at position %d: %s" ofs msg)
+
+let validate str =
+  let ofs, len, msg = next_error str 0 in
+  if ofs = String.length str then
+    len
+  else
+    fail str ofs msg
 
 (* +-----------------------------------------------------------------+
    | Unsafe UTF-8 manipulation                                       |
