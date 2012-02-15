@@ -597,6 +597,18 @@ let rec map_rec buf f str ofs =
 let map f str =
   map_rec (Buffer.create (String.length str)) f str 0
 
+let rec map_concat_rec buf f str ofs =
+  if ofs = String.length str then
+    Buffer.contents buf
+  else begin
+    let chr, ofs = unsafe_extract_next str ofs in
+    Buffer.add_string buf (f chr);
+    map_concat_rec buf f str ofs
+  end
+
+let map_concat f str =
+  map_concat_rec (Buffer.create (String.length str)) f str 0
+
 let rec rev_map_rec buf f str ofs =
   if ofs = 0 then
     Buffer.contents buf
@@ -608,6 +620,18 @@ let rec rev_map_rec buf f str ofs =
 
 let rev_map f str =
   rev_map_rec (Buffer.create (String.length str)) f str (String.length str)
+
+let rec rev_map_concat_rec buf f str ofs =
+  if ofs = 0 then
+    Buffer.contents buf
+  else begin
+    let chr, ofs = unsafe_extract_prev str ofs in
+    Buffer.add_string buf (f chr);
+    rev_map_concat_rec buf f str ofs
+  end
+
+let rev_map_concat f str =
+  rev_map_concat_rec (Buffer.create (String.length str)) f str (String.length str)
 
 let rec filter_rec buf f str ofs =
   if ofs = String.length str then
@@ -651,6 +675,22 @@ let rec filter_map_rec buf f str ofs =
 let filter_map f str =
   filter_map_rec (Buffer.create (String.length str)) f str 0
 
+let rec filter_map_concat_rec buf f str ofs =
+  if ofs = String.length str then
+    Buffer.contents buf
+  else begin
+    let chr, ofs = unsafe_extract_next str ofs in
+    (match f chr with
+       | Some txt ->
+           Buffer.add_string buf txt
+       | None ->
+           ());
+    filter_map_concat_rec buf f str ofs
+  end
+
+let filter_map_concat f str =
+  filter_map_concat_rec (Buffer.create (String.length str)) f str 0
+
 let rec rev_filter_map_rec buf f str ofs =
   if ofs = 0 then
     Buffer.contents buf
@@ -666,6 +706,22 @@ let rec rev_filter_map_rec buf f str ofs =
 
 let rev_filter_map f str =
   rev_filter_map_rec (Buffer.create (String.length str)) f str (String.length str)
+
+let rec rev_filter_map_concat_rec buf f str ofs =
+  if ofs = 0 then
+    Buffer.contents buf
+  else begin
+    let chr, ofs = unsafe_extract_prev str ofs in
+    (match f chr with
+       | Some txt ->
+           Buffer.add_string buf txt
+       | None ->
+           ());
+    rev_filter_map_concat_rec buf f str ofs
+  end
+
+let rev_filter_map_concat f str =
+  rev_filter_map_concat_rec (Buffer.create (String.length str)) f str (String.length str)
 
 (* +-----------------------------------------------------------------+
    | Scanning                                                        |
@@ -847,3 +903,97 @@ let extract_prev str ofs =
     raise Out_of_bounds
   else
     unsafe_extract_prev str ofs
+
+(* +-----------------------------------------------------------------+
+   | Escaping                                                        |
+   +-----------------------------------------------------------------+ *)
+
+let alphabetic = UCharInfo.load_property_tbl `Alphabetic
+
+let escaped_char ch =
+  match UChar.code ch with
+    | 7 ->
+        "\\a"
+    | 8 ->
+        "\\b"
+    | 9 ->
+        "\\t"
+    | 10 ->
+        "\\n"
+    | 11 ->
+        "\\v"
+    | 12 ->
+        "\\f"
+    | 13 ->
+        "\\r"
+    | 27 ->
+        "\\e"
+    | 92 ->
+        "\\\\"
+    | code when code >= 32 && code <= 126 ->
+        String.make 1 (Char.chr code)
+    | _ when UCharTbl.Bool.get alphabetic ch ->
+        singleton ch
+    | code when code <= 127 ->
+        Printf.sprintf "\\x%02x" code
+    | code when code <= 0xffff ->
+        Printf.sprintf "\\u%04x" code
+    | code ->
+        Printf.sprintf "\\U%06x" code
+
+let add_escaped_char buf ch =
+  match UChar.code ch with
+    | 7 ->
+        Buffer.add_string buf "\\a"
+    | 8 ->
+        Buffer.add_string buf "\\b"
+    | 9 ->
+        Buffer.add_string buf "\\t"
+    | 10 ->
+        Buffer.add_string buf "\\n"
+    | 11 ->
+        Buffer.add_string buf "\\v"
+    | 12 ->
+        Buffer.add_string buf "\\f"
+    | 13 ->
+        Buffer.add_string buf "\\r"
+    | 27 ->
+        Buffer.add_string buf "\\e"
+    | 92 ->
+        Buffer.add_string buf "\\\\"
+    | code when code >= 32 && code <= 126 ->
+        Buffer.add_char buf (Char.chr code)
+    | _ when UCharTbl.Bool.get alphabetic ch ->
+        add buf ch
+    | code when code <= 127 ->
+        Printf.bprintf buf "\\x%02x" code
+    | code when code <= 0xffff ->
+        Printf.bprintf buf "\\u%04x" code
+    | code ->
+        Printf.bprintf buf "\\U%06x" code
+
+let escaped str =
+  let buf = Buffer.create (String.length str) in
+  iter (add_escaped_char buf) str;
+  Buffer.contents buf
+
+let add_escaped buf str =
+  iter (add_escaped_char buf) str
+
+let add_escaped_string buf enc str =
+  match try Some (CharEncoding.recode_string enc CharEncoding.utf8 str) with CharEncoding.Malformed_code -> None with
+    | Some str ->
+        add_escaped buf str
+    | None ->
+        String.iter
+          (function
+             | '\x20' .. '\x7e' as ch ->
+                 Buffer.add_char buf ch
+             | ch ->
+                 Printf.bprintf buf "\\y%02x" (Char.code ch))
+          str
+
+let escaped_string enc str =
+  let buf = Buffer.create (String.length str) in
+  add_escaped_string buf enc str;
+  Buffer.contents buf

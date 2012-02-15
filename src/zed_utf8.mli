@@ -156,6 +156,14 @@ val rev_map : (UChar.t -> UChar.t) -> t -> t
   (** [rev_map f str] maps all characters of [str] with [f] in reverse
       order. *)
 
+val map_concat : (UChar.t -> t) -> t -> t
+  (** [map f str] maps all characters of [str] with [f] and
+      concatenate the result. *)
+
+val rev_map_concat : (UChar.t -> t) -> t -> t
+  (** [rev_map f str] maps all characters of [str] with [f] in reverse
+      order and concatenate the result. *)
+
 val filter : (UChar.t -> bool) -> t -> t
   (** [filter f str] filters characters of [str] with [f]. *)
 
@@ -170,6 +178,14 @@ val filter_map : (UChar.t -> UChar.t option) -> t -> t
 val rev_filter_map : (UChar.t -> UChar.t option) -> t -> t
   (** [rev_filter_map f str] filters and maps characters of [str] with
       [f] in reverse order. *)
+
+val filter_map_concat : (UChar.t -> t option) -> t -> t
+  (** [filter_map f str] filters and maps characters of [str] with [f]
+      and concatenate the result. *)
+
+val rev_filter_map_concat : (UChar.t -> t option) -> t -> t
+  (** [rev_filter_map f str] filters and maps characters of [str] with
+      [f] in reverse order and concatenate the result. *)
 
 (** {6 Scanning} *)
 
@@ -233,7 +249,42 @@ val add : Buffer.t -> UChar.t -> unit
   (** [add buf ch] is the same as [Buffer.add_string buf (singleton
       ch)] but is more efficient. *)
 
-(** {6 Unsafe offset API} *)
+(** {6 Escaping} *)
+
+val escaped_char : UChar.t -> t
+  (** [escaped_char ch] returns a string containg [ch] or an escaped
+      version of [ch] if:
+      - [ch] is a control character (code < 32)
+      - [ch] is the character with code 127
+      - [ch] is a non-ascii, non-alphabetic character
+
+      It uses the syntax [\xXX], [\uXXXX], [\UXXXXXX] or a specific
+      escape sequence [\n, \r, ...]. *)
+
+val add_escaped_char : Buffer.t -> UChar.t -> unit
+  (** [add_escaped_char buf ch] is the same as [Buffer.add_string buf
+      (escaped_char ch)] but a bit more efficient. *)
+
+val escaped : t -> t
+  (** [escaped text] escape all characters of [text] as with
+      [escape_char]. *)
+
+val add_escaped : Buffer.t -> t -> unit
+  (** [add_escaped_char buf text] is the same as [Buffer.add_string
+      buf (escaped text)] but a bit more efficient. *)
+
+val escaped_string : CamomileLibraryDyn.Camomile.CharEncoding.t -> string -> t
+  (** [escaped_string enc str] escape the string [str] which is
+      encoded with encoding [enc]. If decoding [str] with [enc] fails,
+      it escape all non-printable bytes of [str] with the syntax
+      [\yAB]. *)
+
+val add_escaped_string : Buffer.t -> CamomileLibraryDyn.Camomile.CharEncoding.t -> string -> unit
+  (** [add_escaped_char buf enc text] is the same as
+      [Buffer.add_string buf (escaped_string enc text)] but a bit more
+      efficient. *)
+
+(** {6 Safe offset API} *)
 
 val next : t -> int -> int
   (** [next str ofs] returns the offset of the next character in
