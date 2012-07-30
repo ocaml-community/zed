@@ -1,3 +1,8 @@
+===== 1.2 (2012-07-30) =====
+
+  * add escaping functions
+  * add Zed_utf8.next_error
+
 ===== 1.1 (2011-08-06) =====
 
   * add the {delete,kill}-{prev,next}-word actions and functions
