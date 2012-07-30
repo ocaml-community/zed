@@ -2,7 +2,7 @@
 # | Package parameters                                                |
 # +-------------------------------------------------------------------+
 
-OASISFormat: 0.1
+OASISFormat: 0.3
 OCamlVersion: >= 3.12
 Name: zed
 Version: 1.1
@@ -11,7 +11,7 @@ License: BSD3
 Authors: Jérémie Dimino
 Homepage: http://zed.forge.ocamlcore.org/
 BuildTools: ocamlbuild
-Plugins: DevFiles (0.2), META (0.2)
+Plugins: DevFiles (0.3), META (0.3)
 Synopsis: Abstract engine for text edition in OCaml
 Description:
   Zed is an abstract engine for text edition. It can be used to
@@ -51,7 +51,7 @@ Library zed
 
 Document "zed-api"
   Title: API reference for Zed
-  Type: ocamlbuild (0.2)
+  Type: ocamlbuild (0.3)
   Install: true
   InstallDir: $htmldir/api
   DataFiles: style.css
