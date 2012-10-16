@@ -65,6 +65,6 @@ Document "zed-api"
 # +-------------------------------------------------------------------+
 
 SourceRepository head
-  Type: darcs
-  Location: http://darcs.ocamlcore.org/repos/zed
-  Browser: http://darcs.ocamlcore.org/cgi-bin/darcsweb.cgi?r=zed;a=summary
+  Type: git
+  Location: https://github.com/diml/zed.git
+  Browser: https://github.com/diml/zed
