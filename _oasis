@@ -12,6 +12,7 @@ Authors: Jérémie Dimino
 Homepage: http://zed.forge.ocamlcore.org/
 BuildTools: ocamlbuild
 Plugins: DevFiles (0.3), META (0.3)
+XDevFilesEnableMakefile: false
 Synopsis: Abstract engine for text edition in OCaml
 Description:
   Zed is an abstract engine for text edition. It can be used to
