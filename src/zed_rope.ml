@@ -285,13 +285,17 @@ let rec map f = function
   | Leaf(txt, len) ->
       Leaf(Zed_utf8.map f txt, len)
   | Node(depth, length_l, rope_l, length_r, rope_r) ->
-      Node(depth, length_l, map f rope_l, length_r, map f rope_r)
+      let rope_l' = map f rope_l in
+      let rope_r' = map f rope_r in
+      Node(depth, length_l, rope_l', length_r, rope_r')
 
 let rec rev_map f = function
   | Leaf(txt, len) ->
       Leaf(Zed_utf8.rev_map f txt, len)
   | Node(depth, length_l, rope_l, length_r, rope_r) ->
-      Node(depth, length_r, rev_map f rope_r, length_l, rev_map f rope_l)
+      let rope_l' = rev_map f rope_l in
+      let rope_r' = rev_map f rope_r in
+      Node(depth, length_r, rope_r', length_l, rope_l')
 
 let rec iter_leaf f = function
   | Leaf(text, _) ->
