@@ -1,3 +1,10 @@
+1.3 (2014-04-21)
+----------------
+
+* `Zed_rope` fixes:
+  - `rev_map`: fix recursion
+  - enforce evaluation order in `map` & `rev_map`
+
 1.2 (2012-07-30)
 ----------------
 
