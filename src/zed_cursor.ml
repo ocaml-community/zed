@@ -56,7 +56,7 @@ let create length changes get_lines position wanted_column =
       if delta >= 0 then
         (* Text has been inserted, advance the cursor. *)
         set_position (position + delta)
-      else if start - delta <= position then
+      else if position < start - delta  then
         (* Text has been removed and the removed block contains the
            cursor, move it at the beginning of the removed block. *)
         set_position start
