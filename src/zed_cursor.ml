@@ -18,6 +18,7 @@ type t = {
   changes : (int * int * int) event;
   mutable handle_changes : unit event;
   get_lines : unit -> Zed_lines.t;
+  coordinates : (int * int) signal;
   line : int signal;
   column : int signal;
   wanted_column : int signal;
@@ -41,6 +42,7 @@ let create length changes get_lines position wanted_column =
     changes;
     handle_changes = E.never;
     get_lines;
+    coordinates;
     line = S.map fst coordinates;
     column = S.map snd coordinates;
     wanted_column;
@@ -56,7 +58,7 @@ let create length changes get_lines position wanted_column =
       if delta >= 0 then
         (* Text has been inserted, advance the cursor. *)
         set_position (position + delta)
-      else if start - delta <= position then
+      else if position < start - delta  then
         (* Text has been removed and the removed block contains the
            cursor, move it at the beginning of the removed block. *)
         set_position start
@@ -83,6 +85,8 @@ let line cursor = cursor.line
 let get_line cursor = S.value cursor.line
 let column cursor = cursor.column
 let get_column cursor = S.value cursor.column
+let coordinates cursor = cursor.coordinates
+let get_coordinates cursor = S.value cursor.coordinates
 let wanted_column cursor = cursor.wanted_column
 let get_wanted_column cursor = S.value cursor.wanted_column
 let set_wanted_column cursor column = cursor.set_wanted_column column

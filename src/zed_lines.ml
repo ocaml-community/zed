@@ -98,6 +98,15 @@ let line_start set idx =
   else
     line_start_rec set idx 0
 
+let line_stop set idx =
+  if idx = count set
+  then length set
+  else line_start set (idx + 1) - 1
+
+let line_length set idx =
+  line_stop set idx - line_start set idx
+
+
 (* +-----------------------------------------------------------------+
    | Operations on sets                                              |
    +-----------------------------------------------------------------+ *)

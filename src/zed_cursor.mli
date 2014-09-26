@@ -67,6 +67,14 @@ val column : t -> int signal
 val get_column : t -> int
   (** [get_column cursor] returns the current column of the cursor. *)
 
+val coordinates : t -> (int * int) signal
+  (** [coordinates cursor] returns the signal holding the current
+      line & column of the cursor. *)
+
+val get_coordinates : t -> int * int
+  (** [get_coordinates cursor] returns the
+      current line & column of the cursor. *)
+
 val wanted_column : t -> int signal
   (** [wanted_column cursor] returns the signal holding the column on
       which the cursor wants to be. *)

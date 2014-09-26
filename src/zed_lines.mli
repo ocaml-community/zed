@@ -41,6 +41,14 @@ val line_start : t -> int -> int
   (** [line_start set idx] returns the offset of the beginning of the
       [idx]th line of [set] . *)
 
+val line_stop : t -> int -> int
+  (** [line_stop set idx] returns the offset of the end of the
+      [idx]th line of [set] . *)
+
+val line_length : t -> int -> int
+  (** [line_length set idx] returns the length of the
+      [idx]th line of [set] . *)
+
 val append : t -> t -> t
   (** [append s1 s2] concatenates two sets of line positions. *)
 

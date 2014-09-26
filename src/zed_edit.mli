@@ -80,6 +80,10 @@ val text : 'a t -> Zed_rope.t
 val lines : 'a t -> Zed_lines.t
   (** [lines edit] returns the set of line position of [text edit]. *)
 
+val get_line : 'a t -> int -> Zed_rope.t
+  (** [get_line edit n] returns the rope corresponding to the [n]th line
+      without the newline character. *)
+
 val changes : 'a t -> (int * int * int) event
   (** [changes edit] returns an event which occurs with values of the
       form [(start, added, removed)] when the contents of the engine

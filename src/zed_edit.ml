@@ -159,6 +159,13 @@ let selection engine = engine.selection
 let get_selection engine = S.value engine.selection
 let set_selection engine state = engine.set_selection state
 
+let get_line e i =
+  let txt = text e in
+  let lines = lines e in
+  let start = Zed_lines.line_start lines i in
+  let stop = Zed_lines.line_stop lines i in
+  Zed_rope.sub txt start (stop - start)
+
 let update engine cursors =
   E.select (
     E.stamp engine.changes ()
