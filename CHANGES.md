@@ -1,3 +1,11 @@
+1.4 (2015-01-07)
+----------------
+
+* added `Zed_edit.get_line`
+* added `Zed_line.line_{length,stop}`
+* fix a bug in cursor updates
+* fix some invalid use of react
+
 1.3 (2014-04-21)
 ----------------
 
