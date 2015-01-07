@@ -129,7 +129,7 @@ let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word
     set_selection;
     match_word;
     locale;
-    undo = Array.create undo_size (Zed_rope.empty, Zed_lines.empty, 0, 0, 0, 0);
+    undo = Array.make undo_size (Zed_rope.empty, Zed_lines.empty, 0, 0, 0, 0);
     undo_size;
     undo_start = 0;
     undo_index = 0;

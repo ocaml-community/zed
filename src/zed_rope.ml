@@ -528,7 +528,7 @@ module Zip = struct
             sub_rec (append acc rope) rest (len - len')
 
   let unsafe_sub str ofs len =
-    let res = String.create len in
+    let res = Bytes.create len in
     String.unsafe_blit str ofs res 0 len;
     res
 
@@ -708,7 +708,7 @@ let rec blit_rope str ofs rope =
         blit_rope str (blit_rope str ofs rope_l) rope_r
 
 let to_string rope =
-  let str = String.create (byte_length rope 0) in
+  let str = Bytes.create (byte_length rope 0) in
   ignore (blit_rope str 0 rope);
   str
 

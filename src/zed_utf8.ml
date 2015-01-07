@@ -16,7 +16,7 @@ exception Out_of_bounds
 let fail str pos msg = raise (Invalid(Printf.sprintf "at position %d: %s" pos msg, str))
 
 let byte str i = Char.code (String.unsafe_get str i)
-let set_byte str i n = String.unsafe_set str i (Char.unsafe_chr n)
+let set_byte str i n = Bytes.unsafe_set str i (Char.unsafe_chr n)
 
 (* +-----------------------------------------------------------------+
    | Validation                                                      |
@@ -261,7 +261,7 @@ let rec move_r str ofs len =
     move_r str (unsafe_prev str ofs) (len - 1)
 
 let unsafe_sub str ofs len =
-  let res = String.create len in
+  let res = Bytes.create len in
   String.unsafe_blit str ofs res 0 len;
   res
 
@@ -272,22 +272,22 @@ let unsafe_sub str ofs len =
 let singleton char =
   let code = UChar.code char in
   if code < 0x80 then begin
-    let s = String.create 1 in
+    let s = Bytes.create 1 in
     set_byte s 0 code;
     s
   end else if code <= 0x800 then begin
-    let s = String.create 2 in
+    let s = Bytes.create 2 in
     set_byte s 0 ((code lsr 6) lor 0xc0);
     set_byte s 1 ((code land 0x3f) lor 0x80);
     s
   end else if code <= 0x10000 then begin
-    let s = String.create 3 in
+    let s = Bytes.create 3 in
     set_byte s 0 ((code lsr 12) lor 0xe0);
     set_byte s 1 (((code lsr 6) land 0x3f) lor 0x80);
     set_byte s 2 ((code land 0x3f) lor 0x80);
     s
   end else if code <= 0x10ffff then begin
-    let s = String.create 4 in
+    let s = Bytes.create 4 in
     set_byte s 0 ((code lsr 18) lor 0xf0);
     set_byte s 1 (((code lsr 12) land 0x3f) lor 0x80);
     set_byte s 2 (((code lsr 6) land 0x3f) lor 0x80);
@@ -301,7 +301,7 @@ let singleton char =
 let make n code =
   let str = singleton code in
   let len = String.length str in
-  let res = String.create (n * len) in
+  let res = Bytes.create (n * len) in
   let ofs = ref 0 in
   for i = 1 to n do
     String.unsafe_blit str 0 res !ofs len;
@@ -407,7 +407,7 @@ let concat3 a b c =
   let lena = String.length a
   and lenb = String.length b
   and lenc = String.length c in
-  let res = String.create (lena + lenb + lenc) in
+  let res = Bytes.create (lena + lenb + lenc) in
   String.unsafe_blit a 0 res 0 lena;
   String.unsafe_blit b 0 res lena lenb;
   String.unsafe_blit c 0 res (lena + lenb) lenc;
@@ -450,7 +450,7 @@ let rec rev_rec res str ofs_src ofs_dst =
 
 let rev str =
   let len = String.length str in
-  rev_rec (String.create len) str 0 len
+  rev_rec (Bytes.create len) str 0 len
 
 let concat sep l =
   match l with
@@ -459,7 +459,7 @@ let concat sep l =
     | x :: l ->
         let sep_len = String.length sep in
         let len = List.fold_left (fun len str -> len + sep_len + String.length str) (String.length x) l in
-        let res = String.create len in
+        let res = Bytes.create len in
         String.unsafe_blit x 0 res 0 (String.length x);
         ignore
           (List.fold_left
@@ -479,7 +479,7 @@ let rev_concat sep l =
     | x :: l ->
         let sep_len = String.length sep in
         let len = List.fold_left (fun len str -> len + sep_len + String.length str) (String.length x) l in
-        let res = String.create len in
+        let res = Bytes.create len in
         let ofs = len - String.length x in
         String.unsafe_blit x 0 res ofs (String.length x);
         ignore
@@ -517,7 +517,7 @@ let rev_explode str =
 let implode l =
   let l = List.map singleton l in
   let len = List.fold_left (fun len str -> len + String.length str) 0 l in
-  let res = String.create len in
+  let res = Bytes.create len in
   ignore
     (List.fold_left
        (fun ofs str ->
@@ -530,7 +530,7 @@ let implode l =
 let rev_implode l =
   let l = List.map singleton l in
   let len = List.fold_left (fun len str -> len + String.length str) 0 l in
-  let res = String.create len in
+  let res = Bytes.create len in
   ignore
     (List.fold_left
        (fun ofs str ->
