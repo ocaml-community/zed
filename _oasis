@@ -33,7 +33,7 @@ Description:
 
 Library zed
   FindlibName: zed
-  BuildDepends: react, camomile (>= 0.8)
+  BuildDepends: bytes, react, camomile (>= 0.8)
   XMETADescription: Edition engine
   Path: src
   Install: true
