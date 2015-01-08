@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6dcc0c74b7c7ddaceebb3906a6554219)
+# DO NOT EDIT (digest: 6385b5511b372175e2f554771063b58a)
 version = "1.4"
 description = "Edition engine"
-requires = "react camomile"
+requires = "bytes react camomile"
 archive(byte) = "zed.cma"
 archive(byte, plugin) = "zed.cma"
 archive(native) = "zed.cmxa"
