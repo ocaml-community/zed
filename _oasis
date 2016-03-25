@@ -5,7 +5,7 @@
 OASISFormat: 0.3
 OCamlVersion: >= 4.02.3
 Name: zed
-Version: 1.4
+Version: 2.0
 LicenseFile: LICENSE
 License: BSD-3-clause
 Authors: Jeremie Dimino
@@ -31,8 +31,8 @@ Description:
 # | The library                                                       |
 # +-------------------------------------------------------------------+
 
-Library zed
-  FindlibName: zed
+Library zed2
+  FindlibName: zed2
   BuildDepends: bytes, react, uchar, result, uucp, uuseg
   XMETADescription: Edition engine
   Path: src
@@ -52,7 +52,7 @@ Library zed
 # | Doc                                                               |
 # +-------------------------------------------------------------------+
 
-Document "zed-api"
+Document "zed2-api"
   Title: API reference for Zed
   Type: ocamlbuild (0.3)
   Install: true
@@ -60,7 +60,7 @@ Document "zed-api"
   DataFiles: style.css
   BuildTools: ocamldoc
   XOCamlbuildPath: ./
-  XOCamlbuildLibraries: zed
+  XOCamlbuildLibraries: zed2
 
 # +-------------------------------------------------------------------+
 # | Misc                                                              |
