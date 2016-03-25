@@ -7,8 +7,6 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDyn.Camomile
-
 type t = string
 exception Invalid of string * string
 exception Out_of_bounds
@@ -21,10 +19,6 @@ let set_byte str i n = Bytes.unsafe_set str i (Char.unsafe_chr n)
 (* +-----------------------------------------------------------------+
    | Validation                                                      |
    +-----------------------------------------------------------------+ *)
-
-type check_result =
-  | Correct of int
-  | Message of string
 
 let next_error s i =
   let len = String.length s in
@@ -86,12 +80,12 @@ let next_error s i =
   in
   main i 0
 
-let check str =
+let check str : _ Result.result =
   let ofs, len, msg = next_error str 0 in
   if ofs = String.length str then
-    Correct len
+    Ok len
   else
-    Message (Printf.sprintf "at position %d: %s" ofs msg)
+    Error (Printf.sprintf "at position %d: %s" ofs msg)
 
 let validate str =
   let ofs, len, msg = next_error str 0 in
@@ -164,22 +158,22 @@ let unsafe_extract str ofs =
   let ch = String.unsafe_get str ofs in
   match ch with
     | '\x00' .. '\x7f' ->
-        UChar.of_char ch
+        Uchar.of_char ch
     | '\xc0' .. '\xdf' ->
         if ofs + 2 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          UChar.of_int (((Char.code ch land 0x1f) lsl 6) lor (byte str (ofs + 1) land 0x3f))
+          Uchar.of_int (((Char.code ch land 0x1f) lsl 6) lor (byte str (ofs + 1) land 0x3f))
     | '\xe0' .. '\xef' ->
         if ofs + 3 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          UChar.of_int (((Char.code ch land 0x0f) lsl 12) lor ((byte str (ofs + 1) land 0x3f) lsl 6) lor (byte str (ofs + 2) land 0x3f))
+          Uchar.of_int (((Char.code ch land 0x0f) lsl 12) lor ((byte str (ofs + 1) land 0x3f) lsl 6) lor (byte str (ofs + 2) land 0x3f))
     | '\xf0' .. '\xf7' ->
         if ofs + 4 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          UChar.of_int (((Char.code ch land 0x07) lsl 18) lor ((byte str (ofs + 1) land 0x3f) lsl 12) lor ((byte str (ofs + 2) land 0x3f) lsl 6) lor (byte str (ofs + 3) land 0x3f))
+          Uchar.of_int (((Char.code ch land 0x07) lsl 18) lor ((byte str (ofs + 1) land 0x3f) lsl 12) lor ((byte str (ofs + 2) land 0x3f) lsl 6) lor (byte str (ofs + 3) land 0x3f))
     | _ ->
         fail str ofs "invalid start of UTF-8 sequence"
 
@@ -187,22 +181,22 @@ let unsafe_extract_next str ofs =
   let ch = String.unsafe_get str ofs in
   match ch with
     | '\x00' .. '\x7f' ->
-        (UChar.of_char ch, ofs + 1)
+        (Uchar.of_char ch, ofs + 1)
     | '\xc0' .. '\xdf' ->
         if ofs + 2 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          (UChar.of_int (((Char.code ch land 0x1f) lsl 6) lor (byte str (ofs + 1) land 0x3f)), ofs + 2)
+          (Uchar.of_int (((Char.code ch land 0x1f) lsl 6) lor (byte str (ofs + 1) land 0x3f)), ofs + 2)
     | '\xe0' .. '\xef' ->
         if ofs + 3 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          (UChar.of_int (((Char.code ch land 0x0f) lsl 12) lor ((byte str (ofs + 1) land 0x3f) lsl 6) lor (byte str (ofs + 2) land 0x3f)), ofs + 3)
+          (Uchar.of_int (((Char.code ch land 0x0f) lsl 12) lor ((byte str (ofs + 1) land 0x3f) lsl 6) lor (byte str (ofs + 2) land 0x3f)), ofs + 3)
     | '\xf0' .. '\xf7' ->
         if ofs + 4 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
         else
-          (UChar.of_int (((Char.code ch land 0x07) lsl 18) lor ((byte str (ofs + 1) land 0x3f) lsl 12) lor ((byte str (ofs + 2) land 0x3f) lsl 6) lor (byte str (ofs + 3) land 0x3f)), ofs + 4)
+          (Uchar.of_int (((Char.code ch land 0x07) lsl 18) lor ((byte str (ofs + 1) land 0x3f) lsl 12) lor ((byte str (ofs + 2) land 0x3f) lsl 6) lor (byte str (ofs + 3) land 0x3f)), ofs + 4)
     | _ ->
         fail str ofs "invalid start of UTF-8 sequence"
 
@@ -210,25 +204,25 @@ let unsafe_extract_prev str ofs =
   let ch1 = String.unsafe_get str (ofs - 1) in
   match ch1 with
     | '\x00' .. '\x7f' ->
-        (UChar.of_char ch1, ofs - 1)
+        (Uchar.of_char ch1, ofs - 1)
     | '\x80' .. '\xbf' ->
         if ofs >= 2 then
           let ch2 = String.unsafe_get str (ofs - 2) in
           match ch2 with
             | '\xc0' .. '\xdf' ->
-                (UChar.of_int (((Char.code ch2 land 0x1f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 2)
+                (Uchar.of_int (((Char.code ch2 land 0x1f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 2)
             | '\x80' .. '\xbf' ->
                 if ofs >= 3 then
                   let ch3 = String.unsafe_get str (ofs - 3) in
                   match ch3 with
                     | '\xe0' .. '\xef' ->
-                        (UChar.of_int (((Char.code ch3 land 0x0f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 3)
+                        (Uchar.of_int (((Char.code ch3 land 0x0f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 3)
                     | '\x80' .. '\xbf' ->
                         if ofs >= 4 then
                           let ch4 = String.unsafe_get str (ofs - 4) in
                           match ch4 with
                             | '\xf0' .. '\xf7' ->
-                                (UChar.of_int (((Char.code ch4 land 0x07) lsl 18) lor ((Char.code ch3 land 0x3f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs + 4)
+                                (Uchar.of_int (((Char.code ch4 land 0x07) lsl 18) lor ((Char.code ch3 land 0x3f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs + 4)
                             | _ ->
                                 fail str (ofs - 4) "invalid start of UTF-8 sequence"
                         else
@@ -270,7 +264,7 @@ let unsafe_sub str ofs len =
    +-----------------------------------------------------------------+ *)
 
 let singleton char =
-  let code = UChar.code char in
+  let code = Uchar.to_int char in
   if code < 0x80 then begin
     let s = Bytes.create 1 in
     set_byte s 0 code;
@@ -351,7 +345,7 @@ let rec compare_rec str1 ofs1 str2 ofs2 =
   else
     let code1, ofs1 = unsafe_extract_next str1 ofs1
     and code2, ofs2 = unsafe_extract_next str2 ofs2 in
-    let d = UChar.code code1 - UChar.code code2 in
+    let d = Uchar.to_int code1 - Uchar.to_int code2 in
     if d <> 0 then
       d
     else
@@ -820,22 +814,20 @@ let rec rfind predicate str ofs =
     else
       ofs
 
-let spaces = UCharInfo.load_property_tbl `White_Space
+let is_white_space char = Uucp.White.is_white_space (Uchar.to_int char)
 
-let is_space ch = UCharTbl.Bool.get spaces ch
-
-let strip ?(predicate=is_space) str =
+let strip ?(predicate=is_white_space) str =
   let lofs = lfind predicate str 0 and rofs = rfind predicate str (String.length str) in
   if lofs < rofs then
     unsafe_sub str lofs (rofs - lofs)
   else
     ""
 
-let lstrip ?(predicate=is_space) str =
+let lstrip ?(predicate=is_white_space) str =
   let lofs = lfind predicate str 0 in
   unsafe_sub str lofs (String.length str - lofs)
 
-let rstrip ?(predicate=is_space) str =
+let rstrip ?(predicate=is_white_space) str =
   let rofs = rfind predicate str (String.length str) in
   unsafe_sub str 0 rofs
 
@@ -858,7 +850,7 @@ let rchop = function
    +-----------------------------------------------------------------+ *)
 
 let add buf char =
-  let code = UChar.code char in
+  let code = Uchar.to_int char in
   if code < 0x80 then
     Buffer.add_char buf (Char.unsafe_chr code)
   else if code <= 0x800 then begin
@@ -914,10 +906,10 @@ let extract_prev str ofs =
    | Escaping                                                        |
    +-----------------------------------------------------------------+ *)
 
-let alphabetic = UCharInfo.load_property_tbl `Alphabetic
+let is_alphabetic char = Uucp.Alpha.is_alphabetic (Uchar.to_int char)
 
 let escaped_char ch =
-  match UChar.code ch with
+  match Uchar.to_int ch with
     | 7 ->
         "\\a"
     | 8 ->
@@ -938,7 +930,7 @@ let escaped_char ch =
         "\\\\"
     | code when code >= 32 && code <= 126 ->
         String.make 1 (Char.chr code)
-    | _ when UCharTbl.Bool.get alphabetic ch ->
+    | _ when is_alphabetic ch ->
         singleton ch
     | code when code <= 127 ->
         Printf.sprintf "\\x%02x" code
@@ -948,7 +940,7 @@ let escaped_char ch =
         Printf.sprintf "\\U%06x" code
 
 let add_escaped_char buf ch =
-  match UChar.code ch with
+  match Uchar.to_int ch with
     | 7 ->
         Buffer.add_string buf "\\a"
     | 8 ->
@@ -969,7 +961,7 @@ let add_escaped_char buf ch =
         Buffer.add_string buf "\\\\"
     | code when code >= 32 && code <= 126 ->
         Buffer.add_char buf (Char.chr code)
-    | _ when UCharTbl.Bool.get alphabetic ch ->
+    | _ when is_alphabetic ch ->
         add buf ch
     | code when code <= 127 ->
         Printf.bprintf buf "\\x%02x" code
@@ -986,20 +978,21 @@ let escaped str =
 let add_escaped buf str =
   iter (add_escaped_char buf) str
 
-let add_escaped_string buf enc str =
-  match try Some (CharEncoding.recode_string enc CharEncoding.utf8 str) with CharEncoding.Malformed_code -> None with
-    | Some str ->
-        add_escaped buf str
-    | None ->
-        String.iter
-          (function
-             | '\x20' .. '\x7e' as ch ->
-                 Buffer.add_char buf ch
-             | ch ->
-                 Printf.bprintf buf "\\y%02x" (Char.code ch))
-          str
+let add_escaped_string buf str =
+  let ofs = ref 0 in
+  while !ofs < String.length str do
+    try
+      while !ofs < String.length str do
+        let chr, ofs' = unsafe_extract_next str !ofs in
+        add_escaped_char buf chr;
+        ofs := ofs';
+      done
+    with Invalid _ ->
+      add_escaped_char buf (Uchar.of_char str.[!ofs]);
+      incr ofs
+  done
 
-let escaped_string enc str =
+let escaped_string str =
   let buf = Buffer.create (String.length str) in
-  add_escaped_string buf enc str;
+  add_escaped_string buf str;
   Buffer.contents buf

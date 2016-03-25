@@ -9,8 +9,6 @@
 
 (** Unicode ropes *)
 
-open CamomileLibrary
-
 type t
   (** Type of unicode ropes. *)
 
@@ -26,19 +24,19 @@ exception Out_of_bounds
 val empty : t
   (** The empty rope. *)
 
-val make : int -> UChar.t -> t
+val make : int -> Uchar.t -> t
   (** [make length char] creates a rope of length [length] containing
       only [char]. *)
 
-val init : int -> (int -> UChar.t) -> t
+val init : int -> (int -> Uchar.t) -> t
   (** [init n f] returns the contenation of [singleton (f 0)],
       [singleton (f 1)], ..., [singleton (f (n - 1))]. *)
 
-val rev_init : int -> (int -> UChar.t) -> t
+val rev_init : int -> (int -> Uchar.t) -> t
   (** [rev_init n f] returns the contenation of [singleton (f (n -
       1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
 
-val singleton : UChar.t -> t
+val singleton : Uchar.t -> t
   (** [singleton ch] creates a rope of length 1 containing only
       [ch]. *)
 
@@ -71,7 +69,7 @@ val to_string : t -> string
 
 (** {6 Random access} *)
 
-val get : t -> int -> UChar.t
+val get : t -> int -> Uchar.t
   (** [get str rope] returns the character at index [idx] in
       [rope]. *)
 
@@ -121,26 +119,26 @@ val rchop : t -> t
 
 (** {6 Iteration, folding and mapping} *)
 
-val iter : (UChar.t -> unit) -> t-> unit
+val iter : (Uchar.t -> unit) -> t-> unit
   (** [iter f rope] applies [f] on all characters of [rope] starting
       from the left. *)
 
-val rev_iter : (UChar.t -> unit) -> t -> unit
+val rev_iter : (Uchar.t -> unit) -> t -> unit
   (** [rev_iter f rope] applies [f] an all characters of [rope]
       starting from the right. *)
 
-val fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val fold : (Uchar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold f rope acc] applies [f] on all characters of [rope]
       starting from the left, accumulating a value. *)
 
-val rev_fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val rev_fold : (Uchar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [rev_fold f rope acc] applies [f] on all characters of [rope]
       starting from the right, accumulating a value. *)
 
-val map : (UChar.t -> UChar.t) -> t -> t
+val map : (Uchar.t -> Uchar.t) -> t -> t
   (** [map f rope] maps all characters of [rope] with [f]. *)
 
-val rev_map : (UChar.t -> UChar.t) -> t -> t
+val rev_map : (Uchar.t -> Uchar.t) -> t -> t
   (** [rev_map f str] maps all characters of [rope] with [f] in
       reverse order. *)
 
@@ -169,71 +167,59 @@ val rev_fold_leaf : (Zed_utf8.t -> 'a -> 'a) -> t -> 'a -> 'a
 
 module Zip : sig
   type t
-    (** Type of zippers. A zipper allow to naviguate in a rope in a
-        convenient and efficient manner. Note that a zipper points to
-        a position between two characters, not to a character, so in a
-        rope of length [len] there is [len + 1] positions. *)
+  (** Type of zippers. A zipper allow to naviguate in a rope in a convenient and efficient
+      manner. Note that a zipper points to a position between two characters, not to a
+      character, so in a rope of length [len] there is [len + 1] positions. *)
 
   val make_f : rope -> int -> t
-    (** [make_f rope pos] creates a new zipper pointing to positon
-        [pos] of [rope]. *)
+  (** [make_f rope pos] creates a new zipper pointing to positon [pos] of [rope]. *)
 
   val make_b : rope -> int -> t
-    (** [make_f rope pos] creates a new zipper pointing to positon
-        [length rope - pos] of [rope]. *)
+  (** [make_f rope pos] creates a new zipper pointing to positon [length rope - pos] of
+      [rope]. *)
 
   val offset : t -> int
-    (** Returns the position of the zipper in the rope. *)
+  (** Returns the position of the zipper in the rope. *)
 
-  val next : t -> UChar.t * t
-    (** [next zipper] returns the code point at the right of the
-        zipper and a zipper to the next position. It raises
-        [Out_of_bounds] if the zipper points to the end of the
-        rope. *)
+  type step = Yield of Uchar.t * t | No_more
 
-  val prev : t -> UChar.t * t
-    (** [prev zipper] returns the code point at the left of the
-        zipper and a zipper to the previous position. It raises
-        [Out_of_bounds] if the zipper points to the beginning of the
-        rope. *)
+  val next : t -> step
+  (** [next zipper] returns the code point at the right of the zipper and a zipper to the
+      next position. *)
+
+  val prev : t -> step
+  (** [prev zipper] returns the code point at the left of the zipper and a zipper to the
+      previous position. *)
 
   val move : int -> t -> t
-    (** [move n zip] moves the zipper by [n] characters. If [n] is
-        negative it is moved to the left and if it is positive it is
-        moved to the right. It raises [Out_of_bounds] if the result
-        is outside the bounds of the rope. *)
+  (** [move n zip] moves the zipper by [n] characters. If [n] is negative it is moved to
+      the left and if it is positive it is moved to the right. It raises [Out_of_bounds]
+      if the result is outside the bounds of the rope. *)
 
   val at_bos : t -> bool
-    (** [at_bos zipper] returns [true] iff [zipper] points to the
-        beginning of the rope. *)
+  (** [at_bos zipper] returns [true] iff [zipper] points to the beginning of the rope. *)
 
   val at_eos : t -> bool
-    (** [at_eos zipper] returns [true] iff [zipper] points to the
-        end of the rope. *)
+  (** [at_eos zipper] returns [true] iff [zipper] points to the end of the rope. *)
 
-  val find_f : (UChar.t -> bool) -> t -> t
-    (** [find_f f zip] search forward for a character to satisfy
-        [f]. It returns a zipper pointing to the left of the first
-        character to satisfy [f], or a zipper pointing to the end of
-        the rope if no such character exists. *)
+  val find_f : (Uchar.t -> bool) -> t -> t
+  (** [find_f f zip] search forward for a character to satisfy [f]. It returns a zipper
+      pointing to the left of the first character to satisfy [f], or a zipper pointing to
+      the end of the rope if no such character exists. *)
 
-  val find_b : (UChar.t -> bool) -> t -> t
-    (** [find_b f zip] search backward for a character to satisfy
-        [f]. It returns a zipper pointing to the right of the first
-        character to satisfy [f], or a zipper pointing to the
-        beginning of the rope if no such character exists. *)
+  val find_b : (Uchar.t -> bool) -> t -> t
+  (** [find_b f zip] search backward for a character to satisfy [f]. It returns a zipper
+      pointing to the right of the first character to satisfy [f], or a zipper pointing to
+      the beginning of the rope if no such character exists. *)
 
   val sub : t -> int -> rope
-    (** [sub zipper len] returns the sub-rope of length [len] pointed
-        by [zipper]. *)
+  (** [sub zipper len] returns the sub-rope of length [len] pointed by [zipper]. *)
 
   val slice : t -> t -> rope
-    (** [slice zipper1 zipper2] returns the rope between [zipper1]
-        and [zipper2]. If [zipper1 > zipper2] then this is the same as
-        [slice zipper2 zipper1].
+  (** [slice zipper1 zipper2] returns the rope between [zipper1] and [zipper2]. If
+      [zipper1 > zipper2] then this is the same as [slice zipper2 zipper1].
 
-        The result is unspecified if the two zippers do not points to
-        the same rope. *)
+      The result is unspecified if the two zippers do not points to the same rope. *)
 end
 
 (** {6 Buffers} *)
@@ -249,7 +235,7 @@ module Buffer : sig
   val create : unit -> t
     (** Create a new empty buffer. *)
 
-  val add : t -> UChar.t -> unit
+  val add : t -> Uchar.t -> unit
     (** [add buffer x] add [x] at the end of [buffer]. *)
 
   val contents : t -> rope
@@ -259,6 +245,3 @@ module Buffer : sig
   val reset : t -> unit
     (** [reset buffer] resets [buffer] to its initial state. *)
 end
-
-(** {6 Camomile compatible interface} *)
-module Text : UnicodeString.Type with type t = rope and type index = Zip.t

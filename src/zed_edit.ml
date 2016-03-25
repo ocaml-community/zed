@@ -5,21 +5,26 @@
  * Licence   : BSD3
  *
  * This file is a part of Zed, an editor engine.
- *)
+*)
 
-open CamomileLibraryDyn.Camomile
 open React
-
-module CaseMap = CaseMap.Make(Zed_rope.Text)
 
 (* +-----------------------------------------------------------------+
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
 
-type clipboard = {
-  clipboard_get : unit -> Zed_rope.t;
-  clipboard_set : Zed_rope.t -> unit;
-}
+module Clipboard = struct
+  type t =
+    { get : unit -> Zed_rope.t
+    ; set : Zed_rope.t -> unit
+    }
+
+  let create () =
+    let r = ref Zed_rope.empty in
+    { get = (fun () -> !r)
+    ; set = (fun x -> r := x)
+    }
+end
 
 type 'a t = {
   mutable data : 'a option;
@@ -42,7 +47,7 @@ type 'a t = {
   editable : int -> int -> bool;
   (* The editable function of the engine. *)
 
-  clipboard : clipboard;
+  clipboard : Clipboard.t;
   (* The clipboard for this engine. *)
 
   mutable mark : Zed_cursor.t;
@@ -54,9 +59,6 @@ type 'a t = {
 
   match_word : Zed_rope.t -> int -> int option;
   (* The function for matching words. *)
-
-  locale : string option signal;
-  (* The buffer's locale. *)
 
   undo : (Zed_rope.t * Zed_lines.t * int * int * int * int) array;
   (* The undo buffer. It is an array of element of the form [(text,
@@ -81,60 +83,62 @@ type 'a t = {
 
 let dummy_cursor = Zed_cursor.create 0 E.never (fun () -> Zed_lines.empty) 0 0
 
-let match_by_regexp re rope idx =
-  match Zed_re.regexp_match ~sem:`Longest re rope idx with
-    | None ->
-        None
-    | Some arr ->
-        match arr.(0) with
-          | Some(zip1, zip2) ->
-              Some(Zed_rope.Zip.offset zip2)
-          | None ->
-              None
+let default_match_word =
+  let rec loop_start segmenter zip =
+    match Zed_rope.Zip.next zip with
+    | No_more         -> None
+    | Yield (ch, zip) ->
+      match Uuseg.add segmenter (`Uchar (Uchar.to_int ch)) with
+      | `Await          -> loop_start segmenter zip
+      | `Uchar _ | `End -> None
+      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
+  and loop_word segmenter zip v ~pos =
+    match Uuseg.add segmenter v with
+    | `Boundary | `End -> Some pos
+    | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
+    | `Await           ->
+      match Zed_rope.Zip.next zip with
+      | No_more         -> Some pos
+      | Yield (ch, zip) -> loop_word segmenter zip (`Uchar (Uchar.to_int ch)) ~pos
+  in
+  fun rope idx ->
+    let zip = Zed_rope.Zip.make_f rope idx in
+    loop_start (Uuseg.create `Word) zip
+;;
 
-let regexp_word =
-  let set = UCharInfo.load_property_set `Alphabetic in
-  let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
-  Zed_re.compile (`Repn(`Set set, 1, None))
-
-let new_clipboard () =
-  let r = ref Zed_rope.empty in
-  { clipboard_get = (fun () -> !r);
-    clipboard_set = (fun x -> r := x) }
-
-
-let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) ?(undo_size = 1000) () =
+let create ?(editable=fun pos len -> true) ?clipboard ?(undo_size = 1000) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
   let clipboard =
     match clipboard with
-      | Some clipboard ->
-          clipboard
-      | None ->
-          new_clipboard ()
+    | Some clipboard ->
+      clipboard
+    | None ->
+      Clipboard.create ()
   in
-  let rec edit = {
-    data = None;
-    text = Zed_rope.empty;
-    lines = Zed_lines.empty;
-    changes;
-    send_changes;
-    erase_mode;
-    set_erase_mode;
-    editable;
-    clipboard;
-    mark = dummy_cursor;
-    selection;
-    set_selection;
-    match_word;
-    locale;
-    undo = Array.make undo_size (Zed_rope.empty, Zed_lines.empty, 0, 0, 0, 0);
-    undo_size;
-    undo_start = 0;
-    undo_index = 0;
-    undo_count = 0;
-  } in
+  let rec edit =
+    { data  = None
+    ; text  = Zed_rope.empty
+    ; lines = Zed_lines.empty
+    ; changes
+    ; send_changes
+    ; erase_mode
+    ; set_erase_mode
+    ; editable
+    ; clipboard
+    ; mark = dummy_cursor
+    ; selection
+    ; set_selection
+    (* TODO: make this user-configurable again *)
+    ; match_word = default_match_word
+    ; undo = Array.make undo_size (Zed_rope.empty, Zed_lines.empty, 0, 0, 0, 0)
+    ; undo_size
+    ; undo_start = 0
+    ; undo_index = 0
+    ; undo_count = 0
+    }
+  in
   edit.mark <- Zed_cursor.create 0 changes (fun () -> edit.lines) 0 0;
   edit
 
@@ -144,8 +148,8 @@ let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word
 
 let get_data engine =
   match engine.data with
-    | Some data -> data
-    | None -> raise Not_found
+  | Some data -> data
+  | None -> raise Not_found
 let set_data engine data = engine.data <- Some data
 let clear_data engine = engine.data <- None
 let text engine = engine.text
@@ -235,12 +239,12 @@ let prev_line_n ctx n =
 
 let move_line ctx delta =
   match delta with
-    | _ when delta < 0 ->
-        prev_line_n ctx (-delta)
-    | _ when delta > 0 ->
-        next_line_n ctx delta
-    | _ ->
-        ()
+  | _ when delta < 0 ->
+    prev_line_n ctx (-delta)
+  | _ when delta > 0 ->
+    next_line_n ctx delta
+  | _ ->
+    ()
 
 let position ctx =
   Zed_cursor.get_position ctx.cursor
@@ -355,7 +359,7 @@ let replace ctx len rope =
     raise Cannot_edit
 
 let newline_rope =
-  Zed_rope.singleton (UChar.of_char '\n')
+  Zed_rope.singleton (Uchar.of_char '\n')
 
 let newline ctx =
   insert ctx newline_rope
@@ -438,12 +442,12 @@ let kill_next_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let index = Zed_cursor.get_line ctx.cursor in
   if index = Zed_lines.count ctx.edit.lines then begin
-    ctx.edit.clipboard.clipboard_set (Zed_rope.after ctx.edit.text position);
+    ctx.edit.clipboard.set (Zed_rope.after ctx.edit.text position);
     ctx.edit.set_selection false;
     remove ctx (Zed_rope.length ctx.edit.text - position)
   end else begin
     let len = Zed_lines.line_start ctx.edit.lines (index + 1) - position in
-    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position len);
+    ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text position len);
     ctx.edit.set_selection false;
     remove ctx len
   end
@@ -451,7 +455,7 @@ let kill_next_line ctx =
 let kill_prev_line ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let start = Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor) in
-  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text start (position - start));
+  ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text start (position - start));
   ctx.edit.set_selection false;
   remove_prev ctx (position - start)
 
@@ -469,7 +473,7 @@ let copy ctx =
   if S.value ctx.edit.selection then begin
     let a = Zed_cursor.get_position ctx.cursor and b = Zed_cursor.get_position ctx.edit.mark in
     let a = min a b and b = max a b in
-    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text a (b - a));
+    ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text a (b - a));
     ctx.edit.set_selection false
   end
 
@@ -477,7 +481,7 @@ let kill ctx =
   if S.value ctx.edit.selection then begin
     let a = Zed_cursor.get_position ctx.cursor and b = Zed_cursor.get_position ctx.edit.mark in
     let a = min a b and b = max a b in
-    ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text a (b - a));
+    ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text a (b - a));
     ctx.edit.set_selection false;
     goto ctx a;
     let a = Zed_cursor.get_position ctx.cursor in
@@ -486,7 +490,7 @@ let kill ctx =
 
 let yank ctx =
   ctx.edit.set_selection false;
-  insert ctx (ctx.edit.clipboard.clipboard_get ())
+  insert ctx (ctx.edit.clipboard.get ())
 
 let search_word_forward ctx =
   let len = Zed_rope.length ctx.edit.text in
@@ -495,10 +499,10 @@ let search_word_forward ctx =
       None
     else
       match ctx.edit.match_word ctx.edit.text idx with
-        | Some idx' ->
-            Some(idx, idx')
-        | None ->
-            loop (idx + 1)
+      | Some idx' ->
+        Some(idx, idx')
+      | None ->
+        loop (idx + 1)
   in
   loop (Zed_cursor.get_position ctx.cursor)
 
@@ -508,116 +512,106 @@ let search_word_backward ctx =
       None
     else
       match ctx.edit.match_word ctx.edit.text idx with
-        | Some idx' ->
-            loop2 (idx - 1) (idx, idx')
-        | None ->
-            loop (idx - 1)
+      | Some idx' ->
+        loop2 (idx - 1) (idx, idx')
+      | None ->
+        loop (idx - 1)
   and loop2 idx result =
     if idx = -1 then
       Some result
     else
       match ctx.edit.match_word ctx.edit.text idx with
-        | Some idx' ->
-            loop2 (idx - 1) (idx, idx')
-        | None ->
-            Some result
+      | Some idx' ->
+        loop2 (idx - 1) (idx, idx')
+      | None ->
+        Some result
   in
   loop (Zed_cursor.get_position ctx.cursor - 1)
 
-let capitalize_word ctx =
+let case_map s ~f =
+  let buf = Buffer.create (String.length s) in
+  Zed_utf8.iter (fun c ->
+    match f (Uchar.to_int c) with
+    | `Self -> Zed_utf8.add buf c
+    | `Uchars us -> List.iter (fun c -> Zed_utf8.add buf (Uchar.of_int c)) us)
+    s;
+  Buffer.contents buf
+
+let replace_word ctx ~f =
   match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        goto ctx idx1;
-        if Zed_cursor.get_position ctx.cursor = idx1 && idx1 < idx2 then begin
-          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          let ch, str' = Zed_rope.break str 1 in
-          replace
-            ctx
-            (Zed_rope.length str)
-            (Zed_rope.append
-               (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) ch)
-               (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str'))
-        end
-    | None ->
-        ()
+  | Some (idx1, idx2) ->
+    goto ctx idx1;
+    if Zed_cursor.get_position ctx.cursor = idx1 && idx1 < idx2 then begin
+      let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
+      replace
+        ctx
+        (Zed_rope.length str)
+        (Zed_rope.of_string (f (Zed_rope.to_string str)))
+    end
+  | None ->
+    ()
+
+let capitalize_word ctx =
+  replace_word ctx ~f:(fun str ->
+    let first, rest = Zed_utf8.break str 1 in
+    case_map first ~f:Uucp.Case.Map.to_upper ^
+    case_map rest  ~f:Uucp.Case.Map.to_lower)
 
 let lowercase_word ctx =
-  match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        goto ctx idx1;
-        if Zed_cursor.get_position ctx.cursor = idx1 then begin
-          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          replace
-            ctx
-            (Zed_rope.length str)
-            (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str)
-        end
-    | None ->
-        ()
+  replace_word ctx ~f:(fun str -> case_map str ~f:Uucp.Case.Map.to_lower)
 
 let uppercase_word ctx =
-  match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        goto ctx idx1;
-        if Zed_cursor.get_position ctx.cursor = idx1 then begin
-          let str = Zed_rope.sub ctx.edit.text idx1 (idx2 - idx1) in
-          replace
-            ctx
-            (Zed_rope.length str)
-            (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) str)
-        end
-    | None ->
-        ()
+  replace_word ctx ~f:(fun str -> case_map str ~f:Uucp.Case.Map.to_upper)
 
 let next_word ctx =
   match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        goto ctx idx2
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    goto ctx idx2
+  | None ->
+    ()
 
 let prev_word ctx =
   match search_word_backward ctx with
-    | Some(idx1, idx2) ->
-        goto ctx idx1
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    goto ctx idx1
+  | None ->
+    ()
 
 let delete_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        remove ctx (idx2 - position)
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    remove ctx (idx2 - position)
+  | None ->
+    ()
 
 let delete_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_backward ctx with
-    | Some(idx1, idx2) ->
-        remove_prev ctx (position - idx1)
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    remove_prev ctx (position - idx1)
+  | None ->
+    ()
 
 let kill_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_forward ctx with
-    | Some(idx1, idx2) ->
-        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (idx2 - position));
-        ctx.edit.set_selection false;
-        remove ctx (idx2 - position)
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text position (idx2 - position));
+    ctx.edit.set_selection false;
+    remove ctx (idx2 - position)
+  | None ->
+    ()
 
 let kill_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_backward ctx with
-    | Some(idx1, idx2) ->
-        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text idx1 (position - idx1));
-        ctx.edit.set_selection false;
-        remove_prev ctx (position - idx1)
-    | None ->
-        ()
+  | Some(idx1, idx2) ->
+    ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text idx1 (position - idx1));
+    ctx.edit.set_selection false;
+    remove_prev ctx (position - idx1)
+  | None ->
+    ()
 
 let undo { check; edit; cursor } =
   if edit.undo_count > 0 then begin
@@ -640,217 +634,104 @@ let undo { check; edit; cursor } =
   end
 
 (* +-----------------------------------------------------------------+
-   | Action by names                                                 |
+   | Actions                                                         |
    +-----------------------------------------------------------------+ *)
 
-type action =
-  | Insert of UChar.t
-  | Newline
-  | Next_char
-  | Prev_char
-  | Next_line
-  | Prev_line
-  | Goto_bol
-  | Goto_eol
-  | Goto_bot
-  | Goto_eot
-  | Delete_next_char
-  | Delete_prev_char
-  | Delete_next_line
-  | Delete_prev_line
-  | Kill_next_line
-  | Kill_prev_line
-  | Switch_erase_mode
-  | Set_mark
-  | Goto_mark
-  | Copy
-  | Kill
-  | Yank
-  | Capitalize_word
-  | Lowercase_word
-  | Uppercase_word
-  | Next_word
-  | Prev_word
-  | Delete_next_word
-  | Delete_prev_word
-  | Kill_next_word
-  | Kill_prev_word
-  | Undo
+type a_context = C : _ context -> a_context
+type 'a for_all_contexts = { f : 'c. 'c context -> 'a }
 
-let get_action = function
-  | Insert ch -> (fun ctx -> insert ctx (Zed_rope.singleton ch))
-  | Newline -> newline
-  | Next_char -> next_char
-  | Prev_char -> prev_char
-  | Next_line -> next_line
-  | Prev_line -> prev_line
-  | Goto_bol -> goto_bol
-  | Goto_eol -> goto_eol
-  | Goto_bot -> goto_bot
-  | Goto_eot -> goto_eot
-  | Delete_next_char -> delete_next_char
-  | Delete_prev_char -> delete_prev_char
-  | Delete_next_line -> delete_next_line
-  | Delete_prev_line -> delete_prev_line
-  | Kill_next_line -> kill_next_line
-  | Kill_prev_line -> kill_prev_line
-  | Switch_erase_mode -> switch_erase_mode
-  | Set_mark -> set_mark
-  | Goto_mark -> goto_mark
-  | Copy -> copy
-  | Kill -> kill
-  | Yank -> yank
-  | Capitalize_word -> capitalize_word
-  | Lowercase_word -> lowercase_word
-  | Uppercase_word -> uppercase_word
-  | Next_word -> next_word
-  | Prev_word -> prev_word
-  | Delete_next_word -> delete_next_word
-  | Delete_prev_word -> delete_prev_word
-  | Kill_next_word -> kill_next_word
-  | Kill_prev_word -> kill_prev_word
-  | Undo -> undo
-
-let doc_of_action = function
-  | Insert _ -> "insert the given character."
-  | Newline -> "insert a newline character."
-  | Next_char -> "move the cursor to the next character."
-  | Prev_char -> "move the cursor to the previous character."
-  | Next_line -> "move the cursor to the next line."
-  | Prev_line -> "move the cursor to the previous line."
-  | Goto_bol -> "move the cursor to the beginning of the current line."
-  | Goto_eol -> "move the cursor to the end of the current line."
-  | Goto_bot -> "move the cursor to the beginning of the text."
-  | Goto_eot -> "move the cursor to the end of the text."
-  | Delete_next_char -> "delete the character after the cursor."
-  | Delete_prev_char -> "delete the character before the cursor."
-  | Delete_next_line -> "delete everything until the end of the current line."
-  | Delete_prev_line -> "delete everything until the beginning of the current line."
-  | Kill_next_line -> "cut everything until the end of the current line."
-  | Kill_prev_line -> "cut everything until the beginning of the current line."
-  | Switch_erase_mode -> "switch the current erasing mode."
-  | Set_mark -> "set the mark to the current position."
-  | Goto_mark -> "move the cursor to the mark."
-  | Copy -> "copy the current region to the clipboard."
-  | Kill -> "cut the current region to the clipboard."
-  | Yank -> "paste the contents of the clipboard at current position."
-  | Capitalize_word -> "capitalize the first word after the cursor."
-  | Lowercase_word -> "convert the first word after the cursor to lowercase."
-  | Uppercase_word -> "convert the first word after the cursor to uppercase."
-  | Next_word -> "move the cursor to the end of the next word."
-  | Prev_word -> "move the cursor to the beginning of the previous word."
-  | Delete_next_word -> "delete up until the next non-word character."
-  | Delete_prev_word -> "delete the word behind the cursor."
-  | Kill_next_word -> "cut up until the next non-word character."
-  | Kill_prev_word -> "cut the word behind the cursor."
-  | Undo -> "revert the last action."
-
-let actions = [
-  Newline, "newline";
-  Next_char, "next-char";
-  Prev_char, "prev-char";
-  Next_line, "next-line";
-  Prev_line, "prev-line";
-  Goto_bol, "goto-bol";
-  Goto_eol, "goto-eol";
-  Goto_bot, "goto-bot";
-  Goto_eot, "goto-eot";
-  Delete_next_char, "delete-next-char";
-  Delete_prev_char, "delete-prev-char";
-  Delete_next_line, "delete-next-line";
-  Delete_prev_line, "delete-prev-line";
-  Kill_next_line, "kill-next-line";
-  Kill_prev_line, "kill-prev-line";
-  Switch_erase_mode, "switch-erase-mode";
-  Set_mark, "set-mark";
-  Goto_mark, "goto-mark";
-  Copy, "copy";
-  Kill, "kill";
-  Yank, "yank";
-  Capitalize_word, "capitalize-word";
-  Lowercase_word, "lowercase-word";
-  Uppercase_word, "uppercase-word";
-  Next_word, "next-word";
-  Prev_word, "prev-word";
-  Delete_next_word, "delete-next-word";
-  Delete_prev_word, "delete-prev-word";
-  Kill_next_word, "kill-next-word";
-  Kill_prev_word, "kill-prev-word";
-  Undo, "undo";
-]
-
-let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)
-let names_to_actions = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare n1 n2) actions)
+let actions =
+  let open Zed_actions in
+  let open Args in
+  let mk name ~doc args impl =
+    Action.make name ~doc args (fun (C context) -> impl.f context)
+  in
+  add empty
+    [ mk "insert" (Zed_actions.Arg.Rope +> nil) { f = insert }
+        ~doc:"insert the given character"
+    ; mk "newline" nil { f = newline }
+        ~doc:"insert a newline character"
+    ; mk "next-char" nil { f = next_char }
+        ~doc:"move the cursor to the next character."
+    ; mk "prev-char" nil { f = prev_char }
+        ~doc:"move the cursor to the previous character."
+    ; mk "next-line" nil { f = next_line }
+        ~doc:"move the cursor to the next line."
+    ; mk "prev-line" nil { f = prev_line }
+        ~doc:"move the cursor to the previous line."
+    ; mk "goto-bol" nil { f = goto_bol }
+        ~doc:"move the cursor to the beginning of the current line."
+    ; mk "goto-eol" nil { f = goto_eol }
+        ~doc:"move the cursor to the end of the current line."
+    ; mk "goto-bot" nil { f = goto_bot }
+        ~doc:"move the cursor to the beginning of the text."
+    ; mk "goto-eot" nil { f = goto_eot }
+        ~doc:"move the cursor to the end of the text."
+    ; mk "delete-next-char" nil { f = delete_next_char }
+        ~doc:"delete the character after the cursor."
+    ; mk "delete-prev-char" nil { f = delete_prev_char }
+        ~doc:"delete the character before the cursor."
+    ; mk "delete-next-line" nil { f = delete_next_line }
+        ~doc:"delete everything until the end of the current line."
+    ; mk "delete-prev-line" nil { f = delete_prev_line }
+        ~doc:"delete everything until the beginning of the current line."
+    ; mk "kill-next-line" nil { f = kill_next_line }
+        ~doc:"cut everything until the end of the current line."
+    ; mk "kill-prev-line" nil { f = kill_prev_line }
+        ~doc:"cut everything until the beginning of the current line."
+    ; mk "switch-erase-mode" nil { f = switch_erase_mode }
+        ~doc:"switch the current erasing mode."
+    ; mk "set-mark" nil { f = set_mark }
+        ~doc:"set the mark to the current position."
+    ; mk "goto-mark" nil { f = goto_mark }
+        ~doc:"move the cursor to the mark."
+    ; mk "copy" nil { f = copy }
+        ~doc:"copy the current region to the clipboard."
+    ; mk "kill" nil { f = kill }
+        ~doc:"cut the current region to the clipboard."
+    ; mk "yank" nil { f = yank }
+        ~doc:"paste the contents of the clipboard at current position."
+    ; mk "capitalize-word" nil { f = capitalize_word }
+        ~doc:"capitalize the first word after the cursor."
+    ; mk "lowercase-word" nil { f = lowercase_word }
+        ~doc:"convert the first word after the cursor to lowercase."
+    ; mk "uppercase-word" nil { f = uppercase_word }
+        ~doc:"convert the first word after the cursor to uppercase."
+    ; mk "next-word" nil { f = next_word }
+        ~doc:"move the cursor to the end of the next word."
+    ; mk "prev-word" nil { f = prev_word }
+        ~doc:"move the cursor to the beginning of the previous word."
+    ; mk "delete-next-word" nil { f = delete_next_word }
+        ~doc:"delete up until the next non-word character."
+    ; mk "delete-prev-word" nil { f = delete_prev_word }
+        ~doc:"delete the word behind the cursor."
+    ; mk "kill-next-word" nil { f = kill_next_word }
+        ~doc:"cut up until the next non-word character."
+    ; mk "kill-prev-word" nil { f = kill_prev_word }
+        ~doc:"cut the word behind the cursor."
+    ; mk "undo" nil { f = undo }
+        ~doc:"revert the last action."
+    ]
 
 let parse_insert x =
   if Zed_utf8.starts_with x "insert(" && Zed_utf8.ends_with x ")" then begin
     let str = String.sub x 7 (String.length x - 8) in
     if String.length str = 1 && Char.code str.[0] < 128 then
-      Insert(UChar.of_char str.[0])
+      Some (Zed_rope.singleton (Uchar.of_char str.[0]))
     else if String.length str > 2 && str.[0] = 'U' && str.[1] = '+' then
       let acc = ref 0 in
       for i = 2 to String.length str - 1 do
         let ch = str.[i] in
         acc := !acc * 16 + (match ch with
-                              | '0' .. '9' -> Char.code ch - Char.code '0'
-                              | 'a' .. 'f' -> Char.code ch - Char.code 'a' + 10
-                              | 'A' .. 'F' -> Char.code ch - Char.code 'A' + 10
-                              | _ -> raise Not_found)
+          | '0' .. '9' -> Char.code ch - Char.code '0'
+          | 'a' .. 'f' -> Char.code ch - Char.code 'a' + 10
+          | 'A' .. 'F' -> Char.code ch - Char.code 'A' + 10
+          | _ -> raise Not_found)
       done;
-      try
-        Insert(UChar.of_int !acc)
-      with _ ->
-        raise Not_found
+      match Uchar.of_int !acc with
+      | c -> Some (Zed_rope.singleton c)
+      | exception _ -> None
     else
-      raise Not_found
+      None
   end else
-    raise Not_found
-
-let action_of_name x =
-  let rec loop a b =
-    if a = b then
-      parse_insert x
-    else
-      let c = (a + b) / 2 in
-      let action, name = Array.unsafe_get names_to_actions c in
-      match compare x name with
-        | d when d < 0 ->
-            loop a c
-        | d when d > 0 ->
-            loop (c + 1) b
-        | _ ->
-            action
-  in
-  loop 0 (Array.length names_to_actions)
-
-let name_of_action x =
-  let rec loop a b =
-    if a = b then
-      raise Not_found
-    else
-      let c = (a + b) / 2 in
-      let action, name = Array.unsafe_get actions_to_names c in
-      match compare x action with
-        | d when d < 0 ->
-            loop a c
-        | d when d > 0 ->
-            loop (c + 1) b
-        | _ ->
-            name
-  in
-  match x with
-    | Insert ch ->
-        let code = UChar.code ch in
-        if code <= 255 then
-          let ch = Char.chr (UChar.code ch) in
-          match ch with
-            | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
-                Printf.sprintf "insert(%c)" ch
-            | _ ->
-                Printf.sprintf "insert(U+%02x)" code
-        else if code <= 0xffff then
-          Printf.sprintf "insert(U+%04x)" code
-        else
-          Printf.sprintf "insert(U+%06x)" code
-    | _ ->
-        loop 0 (Array.length actions_to_names)
+    None

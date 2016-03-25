@@ -3,7 +3,7 @@
 # +-------------------------------------------------------------------+
 
 OASISFormat: 0.3
-OCamlVersion: >= 3.12
+OCamlVersion: >= 4.02.3
 Name: zed
 Version: 1.4
 LicenseFile: LICENSE
@@ -19,10 +19,10 @@ Description:
   Zed is an abstract engine for text edition. It can be used to
   write text editors, edition widgets, readlines, ...
   .
-  Zed uses Camomile to fully support the Unicode specification, and
-  implements an UTF-8 encoded string type with validation, and a rope
-  datastructure to achieve efficient operations on large Unicode
-  buffers. Zed also features a regular expression search on ropes.
+  Zed uses the various uu* libraries from Daniel Bünzli for unicode
+  support, and implements an UTF-8 encoded string type with
+  validation, and a rope datastructure to achieve efficient operations
+  on large Unicode buffers.
   .
   To support efficient text edition capabilities, Zed provides macro
   recording and cursor management facilities.
@@ -33,19 +33,20 @@ Description:
 
 Library zed
   FindlibName: zed
-  BuildDepends: bytes, react, camomile (>= 0.8)
+  BuildDepends: bytes, react, uchar, result, uucp, uuseg
   XMETADescription: Edition engine
   Path: src
   Install: true
   Modules:
     Zed_utf8,
     Zed_rope,
+    Zed_actions,
     Zed_edit,
     Zed_cursor,
     Zed_lines,
-    Zed_re,
     Zed_input,
-    Zed_macro
+    Zed_macro,
+    Zed
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |

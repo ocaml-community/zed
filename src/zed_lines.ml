@@ -7,8 +7,6 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDyn.Camomile
-
 exception Out_of_bounds
 
 (* +-----------------------------------------------------------------+
@@ -211,20 +209,18 @@ let replace set ofs len repl =
 
 let of_rope rope =
   let rec loop zip len acc =
-    if Zed_rope.Zip.at_eos zip then
-      append acc (String len)
-    else
-      let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code ch = 10 then
+    match Zed_rope.Zip.next zip with
+    | No_more -> append acc (String len)
+    | Yield (ch, zip) ->
+      if Uchar.to_int ch = 10 then
         loop0 zip (append (append acc (String len)) Return)
       else
         loop zip (len + 1) acc
   and loop0 zip acc =
-    if Zed_rope.Zip.at_eos zip then
-      acc
-    else
-      let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code ch = 10 then
+    match Zed_rope.Zip.next zip with
+    | No_more -> acc
+    | Yield (ch, zip) ->
+      if Uchar.to_int ch = 10 then
         loop0 zip (append acc Return)
       else
         loop zip 1 acc
