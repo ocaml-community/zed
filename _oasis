@@ -33,7 +33,7 @@ Description:
 
 Library zed2
   FindlibName: zed2
-  BuildDepends: bytes, react, uchar, result, uucp, uuseg
+  BuildDepends: bytes, bigarray, react, uchar, result, uucp, uuseg
   XMETADescription: Edition engine
   Path: src
   Install: true
@@ -47,6 +47,16 @@ Library zed2
     Zed_input,
     Zed_macro,
     Zed
+
+Library zed2_bigarray
+  FindlibName: bigarray
+  FindlibParent: zed2
+  BuildDepends: zed2, bigarray
+  XMETADescription: Bigarray utilities
+  Path: bigarray
+  Install: true
+  Modules:
+    Zed_bigarray
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
