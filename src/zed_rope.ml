@@ -30,11 +30,11 @@ let empty = Leaf("", 0)
    | Basic operations                                                |
    +-----------------------------------------------------------------+ *)
 
-let rec length = function
+let length = function
   | Leaf(_, len) -> len
   | Node(_, len_l, _, len_r, _) -> len_l + len_r
 
-let rec depth = function
+let depth = function
   | Leaf _ -> 0
   | Node(d, _, _, _, _) -> d
 
@@ -99,7 +99,7 @@ let rec balance_rec forest rope =
   match rope with
   | Leaf _ ->
     concat_forest_until forest empty 2 rope
-  | Node(depth, len_l, rope_l, len_r, rope_r) ->
+  | Node(_depth, _len_l, rope_l, _len_r, rope_r) ->
     balance_rec forest rope_l;
     balance_rec forest rope_r
 
@@ -115,7 +115,7 @@ let balance rope =
     rope
   | len when len >= fibo.(depth rope + 2) ->
     rope
-  | len ->
+  | _ ->
     let forest = Array.make max_depth empty in
     balance_rec forest rope;
     concat_forest forest empty 2
@@ -162,7 +162,7 @@ let rec unsafe_get idx rope =
   match rope with
   | Leaf(text, _) ->
     Zed_utf8.get text idx
-  | Node(_, len_l, rope_l, len_r, rope_r) ->
+  | Node(_, len_l, rope_l, _len_r, rope_r) ->
     if idx < len_l then
       unsafe_get idx rope_l
     else

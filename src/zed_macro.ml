@@ -11,13 +11,13 @@ open React
 
 type 'a t = {
   recording : bool signal;
-  set_recording : bool -> unit;
+  set_recording : ?step:React.step -> bool -> unit;
   mutable tmp_macro : 'a list;
   mutable macro : 'a list;
   count : int signal;
-  set_count : int -> unit;
+  set_count : ?step:React.step -> int -> unit;
   counter : int signal;
-  set_counter : int -> unit;
+  set_counter : ?step:React.step -> int -> unit;
 }
 
 let create macro =

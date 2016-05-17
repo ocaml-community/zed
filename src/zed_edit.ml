@@ -26,10 +26,7 @@ module Clipboard = struct
     }
 end
 
-type 'a t = {
-  mutable data : 'a option;
-  (* Custom data attached to the engine. *)
-
+type t = {
   mutable text : Zed_rope.t;
   (* The contents of the engine. *)
 
@@ -37,11 +34,11 @@ type 'a t = {
   (* The set of line position of [text]. *)
 
   changes : (int * int * int) event;
-  send_changes : (int * int * int) -> unit;
+  send_changes : ?step:React.step -> (int * int * int) -> unit;
   (* Changes of the contents. *)
 
   erase_mode : bool signal;
-  set_erase_mode : bool -> unit;
+  set_erase_mode : ?step:React.step -> bool -> unit;
   (* The current erase mode. *)
 
   editable : int -> int -> bool;
@@ -54,7 +51,7 @@ type 'a t = {
   (* The cursor that points to the mark. *)
 
   selection : bool signal;
-  set_selection : bool -> unit;
+  set_selection : ?step:React.step -> bool -> unit;
   (* The current selection state. *)
 
   match_word : Zed_rope.t -> int -> int option;
@@ -106,7 +103,7 @@ let default_match_word =
     loop_start (Uuseg.create `Word) zip
 ;;
 
-let create ?(editable=fun pos len -> true) ?clipboard ?(undo_size = 1000) () =
+let create ?(editable=fun _pos _len -> true) ?clipboard ?(undo_size = 1000) () =
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
@@ -117,9 +114,8 @@ let create ?(editable=fun pos len -> true) ?clipboard ?(undo_size = 1000) () =
     | None ->
       Clipboard.create ()
   in
-  let rec edit =
-    { data  = None
-    ; text  = Zed_rope.empty
+  let edit =
+    { text  = Zed_rope.empty
     ; lines = Zed_lines.empty
     ; changes
     ; send_changes
@@ -146,12 +142,6 @@ let create ?(editable=fun pos len -> true) ?clipboard ?(undo_size = 1000) () =
    | State                                                           |
    +-----------------------------------------------------------------+ *)
 
-let get_data engine =
-  match engine.data with
-  | Some data -> data
-  | None -> raise Not_found
-let set_data engine data = engine.data <- Some data
-let clear_data engine = engine.data <- None
 let text engine = engine.text
 let lines engine = engine.lines
 let changes engine = engine.changes
@@ -191,8 +181,8 @@ let new_cursor engine =
 
 exception Cannot_edit
 
-type 'a context = {
-  edit : 'a t;
+type context = {
+  edit : t;
   cursor : Zed_cursor.t;
   check : bool;
 }
@@ -272,7 +262,7 @@ let at_bot ctx =
 let at_eot ctx =
   Zed_cursor.get_position ctx.cursor = Zed_rope.length ctx.edit.text
 
-let modify { edit } text lines position new_position added removed =
+let modify { edit; _ } text lines position new_position added removed =
   if edit.undo_size > 0 then begin
     edit.undo.(edit.undo_index) <- (text, lines, position, new_position, added, removed);
     edit.undo_index <- (edit.undo_index + 1) mod edit.undo_size;
@@ -565,14 +555,14 @@ let uppercase_word ctx =
 
 let next_word ctx =
   match search_word_forward ctx with
-  | Some(idx1, idx2) ->
+  | Some(_idx1, idx2) ->
     goto ctx idx2
   | None ->
     ()
 
 let prev_word ctx =
   match search_word_backward ctx with
-  | Some(idx1, idx2) ->
+  | Some(idx1, _idx2) ->
     goto ctx idx1
   | None ->
     ()
@@ -580,7 +570,7 @@ let prev_word ctx =
 let delete_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_forward ctx with
-  | Some(idx1, idx2) ->
+  | Some(_idx1, idx2) ->
     remove ctx (idx2 - position)
   | None ->
     ()
@@ -588,7 +578,7 @@ let delete_next_word ctx =
 let delete_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_backward ctx with
-  | Some(idx1, idx2) ->
+  | Some(idx1, _idx2) ->
     remove_prev ctx (position - idx1)
   | None ->
     ()
@@ -596,7 +586,7 @@ let delete_prev_word ctx =
 let kill_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_forward ctx with
-  | Some(idx1, idx2) ->
+  | Some(_idx1, idx2) ->
     ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text position (idx2 - position));
     ctx.edit.set_selection false;
     remove ctx (idx2 - position)
@@ -606,7 +596,7 @@ let kill_next_word ctx =
 let kill_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   match search_word_backward ctx with
-  | Some(idx1, idx2) ->
+  | Some(idx1, _idx2) ->
     ctx.edit.clipboard.set (Zed_rope.sub ctx.edit.text idx1 (position - idx1));
     ctx.edit.set_selection false;
     remove_prev ctx (position - idx1)
@@ -637,79 +627,76 @@ let undo { check; edit; cursor } =
    | Actions                                                         |
    +-----------------------------------------------------------------+ *)
 
-type a_context = C : _ context -> a_context
-type 'a for_all_contexts = { f : 'c. 'c context -> 'a }
-
 let actions =
   let open Zed_actions in
   let open Args in
   let mk name ~doc args impl =
-    Action.make name ~doc args (fun (C context) -> impl.f context)
+    Action.make name ~doc args impl
   in
   add empty
-    [ mk "insert" (Zed_actions.Arg.Rope +> nil) { f = insert }
+    [ mk "insert" (Zed_actions.Arg.Rope +> nil) insert
         ~doc:"insert the given character"
-    ; mk "newline" nil { f = newline }
+    ; mk "newline" nil newline
         ~doc:"insert a newline character"
-    ; mk "next-char" nil { f = next_char }
+    ; mk "next-char" nil next_char
         ~doc:"move the cursor to the next character."
-    ; mk "prev-char" nil { f = prev_char }
+    ; mk "prev-char" nil prev_char
         ~doc:"move the cursor to the previous character."
-    ; mk "next-line" nil { f = next_line }
+    ; mk "next-line" nil next_line
         ~doc:"move the cursor to the next line."
-    ; mk "prev-line" nil { f = prev_line }
+    ; mk "prev-line" nil prev_line
         ~doc:"move the cursor to the previous line."
-    ; mk "goto-bol" nil { f = goto_bol }
+    ; mk "goto-bol" nil goto_bol
         ~doc:"move the cursor to the beginning of the current line."
-    ; mk "goto-eol" nil { f = goto_eol }
+    ; mk "goto-eol" nil goto_eol
         ~doc:"move the cursor to the end of the current line."
-    ; mk "goto-bot" nil { f = goto_bot }
+    ; mk "goto-bot" nil goto_bot
         ~doc:"move the cursor to the beginning of the text."
-    ; mk "goto-eot" nil { f = goto_eot }
+    ; mk "goto-eot" nil goto_eot
         ~doc:"move the cursor to the end of the text."
-    ; mk "delete-next-char" nil { f = delete_next_char }
+    ; mk "delete-next-char" nil delete_next_char
         ~doc:"delete the character after the cursor."
-    ; mk "delete-prev-char" nil { f = delete_prev_char }
+    ; mk "delete-prev-char" nil delete_prev_char
         ~doc:"delete the character before the cursor."
-    ; mk "delete-next-line" nil { f = delete_next_line }
+    ; mk "delete-next-line" nil delete_next_line
         ~doc:"delete everything until the end of the current line."
-    ; mk "delete-prev-line" nil { f = delete_prev_line }
+    ; mk "delete-prev-line" nil delete_prev_line
         ~doc:"delete everything until the beginning of the current line."
-    ; mk "kill-next-line" nil { f = kill_next_line }
+    ; mk "kill-next-line" nil kill_next_line
         ~doc:"cut everything until the end of the current line."
-    ; mk "kill-prev-line" nil { f = kill_prev_line }
+    ; mk "kill-prev-line" nil kill_prev_line
         ~doc:"cut everything until the beginning of the current line."
-    ; mk "switch-erase-mode" nil { f = switch_erase_mode }
+    ; mk "switch-erase-mode" nil switch_erase_mode
         ~doc:"switch the current erasing mode."
-    ; mk "set-mark" nil { f = set_mark }
+    ; mk "set-mark" nil set_mark
         ~doc:"set the mark to the current position."
-    ; mk "goto-mark" nil { f = goto_mark }
+    ; mk "goto-mark" nil goto_mark
         ~doc:"move the cursor to the mark."
-    ; mk "copy" nil { f = copy }
+    ; mk "copy" nil copy
         ~doc:"copy the current region to the clipboard."
-    ; mk "kill" nil { f = kill }
+    ; mk "kill" nil kill
         ~doc:"cut the current region to the clipboard."
-    ; mk "yank" nil { f = yank }
+    ; mk "yank" nil yank
         ~doc:"paste the contents of the clipboard at current position."
-    ; mk "capitalize-word" nil { f = capitalize_word }
+    ; mk "capitalize-word" nil capitalize_word
         ~doc:"capitalize the first word after the cursor."
-    ; mk "lowercase-word" nil { f = lowercase_word }
+    ; mk "lowercase-word" nil lowercase_word
         ~doc:"convert the first word after the cursor to lowercase."
-    ; mk "uppercase-word" nil { f = uppercase_word }
+    ; mk "uppercase-word" nil uppercase_word
         ~doc:"convert the first word after the cursor to uppercase."
-    ; mk "next-word" nil { f = next_word }
+    ; mk "next-word" nil next_word
         ~doc:"move the cursor to the end of the next word."
-    ; mk "prev-word" nil { f = prev_word }
+    ; mk "prev-word" nil prev_word
         ~doc:"move the cursor to the beginning of the previous word."
-    ; mk "delete-next-word" nil { f = delete_next_word }
+    ; mk "delete-next-word" nil delete_next_word
         ~doc:"delete up until the next non-word character."
-    ; mk "delete-prev-word" nil { f = delete_prev_word }
+    ; mk "delete-prev-word" nil delete_prev_word
         ~doc:"delete the word behind the cursor."
-    ; mk "kill-next-word" nil { f = kill_next_word }
+    ; mk "kill-next-word" nil kill_next_word
         ~doc:"cut up until the next non-word character."
-    ; mk "kill-prev-word" nil { f = kill_prev_word }
+    ; mk "kill-prev-word" nil kill_prev_word
         ~doc:"cut the word behind the cursor."
-    ; mk "undo" nil { f = undo }
+    ; mk "undo" nil undo
         ~doc:"revert the last action."
     ]
 

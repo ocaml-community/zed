@@ -42,10 +42,6 @@ let depth = function
   | String _ | Return -> 0
   | Concat(_, _, _, _, d) -> d
 
-let is_empty = function
-  | String 0 -> true
-  | _ -> false
-
 let empty = String 0
 
 (* +-----------------------------------------------------------------+

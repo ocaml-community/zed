@@ -17,7 +17,7 @@ type action =
 
 type t = {
   position : int signal;
-  send : action -> unit;
+  send : ?step:React.step -> action -> unit;
   length : int ref;
   changes : (int * int * int) event;
   get_lines : unit -> Zed_lines.t;
@@ -25,7 +25,7 @@ type t = {
   line : int signal;
   column : int signal;
   wanted_column : int signal;
-  set_wanted_column : int -> unit;
+  set_wanted_column : ?step:React.step -> int -> unit;
 }
 
 let create length changes get_lines position wanted_column =
