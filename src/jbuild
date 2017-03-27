@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(library
+ ((name zed)
+  (public_name zed)
+  (libraries (bytes react camomile))))
