@@ -574,50 +574,58 @@ let next_word ctx =
     | Some(idx1, idx2) ->
         goto ctx idx2
     | None ->
-        ()
+        goto ctx (Zed_rope.length ctx.edit.text)
 
 let prev_word ctx =
   match search_word_backward ctx with
     | Some(idx1, idx2) ->
         goto ctx idx1
     | None ->
-        ()
+        goto ctx 0
 
 let delete_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  match search_word_forward ctx with
+  let word_end = match search_word_forward ctx with
     | Some(idx1, idx2) ->
-        remove ctx (idx2 - position)
+        idx2
     | None ->
-        ()
+      Zed_rope.length ctx.edit.text
+  in
+  remove ctx (word_end - position)
 
 let delete_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  match search_word_backward ctx with
+  let start = match search_word_backward ctx with
     | Some(idx1, idx2) ->
-        remove_prev ctx (position - idx1)
+        idx1
     | None ->
-        ()
+        0
+  in
+  remove_prev ctx (position - start)
 
 let kill_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  match search_word_forward ctx with
+  let word_end = match search_word_forward ctx with
     | Some(idx1, idx2) ->
-        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (idx2 - position));
-        ctx.edit.set_selection false;
-        remove ctx (idx2 - position)
+        idx2
     | None ->
-        ()
+      Zed_rope.length ctx.edit.text
+  in
+  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position (word_end - position));
+  ctx.edit.set_selection false;
+  remove ctx (word_end - position)
 
 let kill_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
-  match search_word_backward ctx with
+  let start = match search_word_backward ctx with
     | Some(idx1, idx2) ->
-        ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text idx1 (position - idx1));
-        ctx.edit.set_selection false;
-        remove_prev ctx (position - idx1)
+        idx1
     | None ->
-        ()
+        0
+  in
+  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text start (position - start));
+  ctx.edit.set_selection false;
+  remove_prev ctx (position - start)
 
 let undo { check; edit; cursor } =
   if edit.undo_count > 0 then begin
