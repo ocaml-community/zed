@@ -2,5 +2,6 @@
 
 (library
  ((name zed)
+  (wrapped false)
   (public_name zed)
   (libraries (bytes react camomile))))
