@@ -1,3 +1,10 @@
+1.5
+---
+
+* Switch to jbuilder (Rudi Gringberg, #4)
+* Make `{delete_,kill_,}{next,prev}_word` consistent near the
+  start/end of the buffer (Fabian (github use copy), #5)
+
 1.4 (2015-01-07)
 ----------------
 
