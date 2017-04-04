@@ -1,5 +1,5 @@
-1.5
----
+1.5 (2017-04-04)
+----------------
 
 * Switch to jbuilder (Rudi Gringberg, #4)
 * Make `{delete_,kill_,}{next,prev}_word` consistent near the
