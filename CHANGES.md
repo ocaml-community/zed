@@ -1,4 +1,4 @@
-1.5 (2017-04-04)
+1.5 (2017-04-26)
 ----------------
 
 * Switch to jbuilder (Rudi Gringberg, #4)
