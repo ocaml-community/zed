@@ -15,5 +15,4 @@ depends: [
 build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
-dev-repo: "git://github.com/diml/zed"
 available: ocaml-version >= "4.02.3"
