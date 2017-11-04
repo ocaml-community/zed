@@ -530,7 +530,7 @@ module Zip = struct
   let unsafe_sub str ofs len =
     let res = Bytes.create len in
     String.unsafe_blit str ofs res 0 len;
-    res
+    Bytes.unsafe_to_string res
 
   let sub zip len =
     if len < 0 then
@@ -710,7 +710,7 @@ let rec blit_rope str ofs rope =
 let to_string rope =
   let str = Bytes.create (byte_length rope 0) in
   ignore (blit_rope str 0 rope);
-  str
+  Bytes.unsafe_to_string str
 
 (* +-----------------------------------------------------------------+
    | Camomile compatible interface                                   |

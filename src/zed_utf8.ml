@@ -263,7 +263,7 @@ let rec move_r str ofs len =
 let unsafe_sub str ofs len =
   let res = Bytes.create len in
   String.unsafe_blit str ofs res 0 len;
-  res
+  Bytes.unsafe_to_string res
 
 (* +-----------------------------------------------------------------+
    | Construction                                                    |
@@ -271,6 +271,7 @@ let unsafe_sub str ofs len =
 
 let singleton char =
   let code = UChar.code char in
+  Bytes.unsafe_to_string @@
   if code < 0x80 then begin
     let s = Bytes.create 1 in
     set_byte s 0 code;
@@ -307,7 +308,7 @@ let make n code =
     String.unsafe_blit str 0 res !ofs len;
     ofs := !ofs + len
   done;
-  res
+  Bytes.unsafe_to_string res
 
 let init n f =
   let buf = Buffer.create n in
@@ -411,7 +412,7 @@ let concat3 a b c =
   String.unsafe_blit a 0 res 0 lena;
   String.unsafe_blit b 0 res lena lenb;
   String.unsafe_blit c 0 res (lena + lenb) lenc;
-  res
+  Bytes.unsafe_to_string res
 
 let insert str idx sub =
   let a, b = break str idx in
@@ -437,9 +438,9 @@ let replace str idx len repl =
    | Exploding and imploding                                         |
    +-----------------------------------------------------------------+ *)
 
-let rec rev_rec res str ofs_src ofs_dst =
+let rec rev_rec (res : Bytes.t) str ofs_src ofs_dst =
   if ofs_src = String.length str then
-    res
+    Bytes.unsafe_to_string res
   else begin
     let ofs_src' = unsafe_next str ofs_src in
     let len = ofs_src' - ofs_src in
@@ -470,7 +471,7 @@ let concat sep l =
                 String.unsafe_blit str 0 res ofs len;
                 ofs + len)
              (String.length x) l);
-        res
+        Bytes.unsafe_to_string res
 
 let rev_concat sep l =
   match l with
@@ -492,7 +493,7 @@ let rev_concat sep l =
                 String.unsafe_blit str 0 res ofs len;
                 ofs)
              ofs l);
-        res
+        Bytes.unsafe_to_string res
 
 let rec explode_rec str ofs acc =
   if ofs = 0 then
@@ -525,7 +526,7 @@ let implode l =
           String.unsafe_blit str 0 res ofs len;
           ofs + len)
        0 l);
-  res
+  Bytes.unsafe_to_string res
 
 let rev_implode l =
   let l = List.map singleton l in
@@ -539,7 +540,7 @@ let rev_implode l =
           String.unsafe_blit str 0 res ofs len;
           ofs)
        len l);
-  res
+  Bytes.unsafe_to_string res
 
 (* +-----------------------------------------------------------------+
    | Text transversal                                                |
