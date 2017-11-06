@@ -13,40 +13,12 @@ Zed provides:
 * key-binding helpers,
 * general purpose unicode rope manipulation functions.
 
-Dependencies
-------------
-
-* [OCaml](http://caml.inria.fr/ocaml/) (>= 3.12)
-* [findlib](http://projects.camlcity.org/projects/findlib.html)
-* [Camomile](http://github.com/yoriyuki/Camomile) (>= 0.8)
-* [react](http://erratique.ch/software/react)
-
-For building the development version, you also need to install
-[oasis](http://oasis.forge.ocamlcore.org/) (>= 0.3.0).
-
 Installation
 ------------
 
-To build and install zed:
+To build and install zed, use opam:
 
-    $ ./configure
-    $ make
-    $ make install
-
-### Documentation _(optional)_
-
-To build the documentation:
-
-    $ make doc
-
-It will then be installed by `make install`.
-
-### Tests _(optionnal)_
-
-To build and execute tests:
-
-    $ ./configure --enable-tests
-    $ make test
+    $ opam install zed
 
 Modules
 -------
