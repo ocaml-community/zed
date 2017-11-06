@@ -7,12 +7,13 @@ bug-reports: "https://github.com/diml/zed/issues"
 dev-repo: "git://github.com/diml/zed.git"
 license: "BSD3"
 depends: [
-  "jbuilder" {build & >= "1.0+beta7"}
+  "jbuilder" {build & >= "1.0+beta9"}
   "base-bytes"
   "camomile" {>= "0.8"}
   "react"
 ]
 build: [
+  ["jbuilder" "subst"] {pinned}
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 available: ocaml-version >= "4.02.3"
