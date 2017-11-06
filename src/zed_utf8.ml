@@ -252,14 +252,6 @@ let rec move_l str ofs len =
   else
     move_l str (unsafe_next str ofs) (len - 1)
 
-let rec move_r str ofs len =
-  if len = 0 then
-    ofs
-  else if ofs = 0 then
-    raise Out_of_bounds
-  else
-    move_r str (unsafe_prev str ofs) (len - 1)
-
 let unsafe_sub str ofs len =
   let res = Bytes.create len in
   String.unsafe_blit str ofs res 0 len;
@@ -304,7 +296,7 @@ let make n code =
   let len = String.length str in
   let res = Bytes.create (n * len) in
   let ofs = ref 0 in
-  for i = 1 to n do
+  for _ = 1 to n do
     String.unsafe_blit str 0 res !ofs len;
     ofs := !ofs + len
   done;
@@ -988,7 +980,7 @@ let add_escaped buf str =
   iter (add_escaped_char buf) str
 
 let add_escaped_string buf enc str =
-  match try Some (CharEncoding.recode_string enc CharEncoding.utf8 str) with CharEncoding.Malformed_code -> None with
+  match try Some (CharEncoding.recode_string ~in_enc:enc ~out_enc:CharEncoding.utf8 str) with CharEncoding.Malformed_code -> None with
     | Some str ->
         add_escaped buf str
     | None ->

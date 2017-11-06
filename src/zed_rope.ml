@@ -26,19 +26,17 @@ type t =
 
 type rope = t
 
-type code_point = int
-
 let empty = Leaf("", 0)
 
 (* +-----------------------------------------------------------------+
    | Basic operations                                                |
    +-----------------------------------------------------------------+ *)
 
-let rec length = function
+let length = function
   | Leaf(_, len) -> len
   | Node(_, len_l, _, len_r, _) -> len_l + len_r
 
-let rec depth = function
+let depth = function
   | Leaf _ -> 0
   | Node(d, _, _, _, _) -> d
 
@@ -103,7 +101,7 @@ let rec balance_rec forest rope =
   match rope with
     | Leaf _ ->
         concat_forest_until forest empty 2 rope
-    | Node(depth, len_l, rope_l, len_r, rope_r) ->
+    | Node(_depth, _len_l, rope_l, _len_r, rope_r) ->
         balance_rec forest rope_l;
         balance_rec forest rope_r
 
@@ -119,7 +117,7 @@ let balance rope =
         rope
     | len when len >= fibo.(depth rope + 2) ->
         rope
-    | len ->
+    | _len ->
         let forest = Array.make max_depth empty in
         balance_rec forest rope;
         concat_forest forest empty 2
@@ -166,7 +164,7 @@ let rec unsafe_get idx rope =
   match rope with
     | Leaf(text, _) ->
         Zed_utf8.get text idx
-    | Node(_, len_l, rope_l, len_r, rope_r) ->
+    | Node(_, len_l, rope_l, _len_r, rope_r) ->
         if idx < len_l then
           unsafe_get idx rope_l
         else
@@ -724,23 +722,23 @@ module Text = struct
   let length = length
 
   type index = Zip.t
-  let look rope zip = fst (Zip.next zip)
+  let look _ zip = fst (Zip.next zip)
   let nth rope idx = Zip.make_f rope idx
-  let next rope zip = Zip.move 1 zip
-  let prev rope zip = Zip.move (-1) zip
-  let out_of_range rope zip = Zip.at_eos zip
+  let next _ zip = Zip.move 1 zip
+  let prev _ zip = Zip.move (-1) zip
+  let out_of_range _ zip = Zip.at_eos zip
 
   let iter = iter
   let compare = compare
 
   let first rope = Zip.make_f rope 0
   let last rope = Zip.make_b rope 1
-  let move rope zip delta = Zip.move delta zip
-  let compare_index rope zip1 zip2 = Zip.offset zip1 - Zip.offset zip2
+  let move _ zip delta = Zip.move delta zip
+  let compare_index _ zip1 zip2 = Zip.offset zip1 - Zip.offset zip2
 
   module Buf = struct
     type buf = Buffer.t
-    let create n = Buffer.create ()
+    let create _ = Buffer.create ()
     let contents = Buffer.contents
     let clear = Buffer.reset
     let reset = Buffer.reset
