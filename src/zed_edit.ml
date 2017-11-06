@@ -87,7 +87,7 @@ let match_by_regexp re rope idx =
         None
     | Some arr ->
         match arr.(0) with
-          | Some(zip1, zip2) ->
+          | Some(_zip1, zip2) ->
               Some(Zed_rope.Zip.offset zip2)
           | None ->
               None
@@ -103,7 +103,10 @@ let new_clipboard () =
     clipboard_set = (fun x -> r := x) }
 
 
-let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) ?(undo_size = 1000) () =
+let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) ?(undo_size = 1000) () =
+  (* I'm not sure how to disable the unused warning with ocaml.warning and the
+     argument can't be removed as it's part of the interface *)
+  let _ = move in
   let changes, send_changes = E.create () in
   let erase_mode, set_erase_mode = S.create false in
   let selection, set_selection = S.create false in
@@ -114,7 +117,7 @@ let create ?(editable=fun pos len -> true) ?(move = (+)) ?clipboard ?(match_word
       | None ->
           new_clipboard ()
   in
-  let rec edit = {
+  let edit = {
     data = None;
     text = Zed_rope.empty;
     lines = Zed_lines.empty;
@@ -268,7 +271,7 @@ let at_bot ctx =
 let at_eot ctx =
   Zed_cursor.get_position ctx.cursor = Zed_rope.length ctx.edit.text
 
-let modify { edit } text lines position new_position added removed =
+let modify { edit ; _ } text lines position new_position added removed =
   if edit.undo_size > 0 then begin
     edit.undo.(edit.undo_index) <- (text, lines, position, new_position, added, removed);
     edit.undo_index <- (edit.undo_index + 1) mod edit.undo_size;
@@ -571,14 +574,14 @@ let uppercase_word ctx =
 
 let next_word ctx =
   match search_word_forward ctx with
-    | Some(idx1, idx2) ->
+    | Some(_idx1, idx2) ->
         goto ctx idx2
     | None ->
         goto ctx (Zed_rope.length ctx.edit.text)
 
 let prev_word ctx =
   match search_word_backward ctx with
-    | Some(idx1, idx2) ->
+    | Some(idx1, _idx2) ->
         goto ctx idx1
     | None ->
         goto ctx 0
@@ -586,7 +589,7 @@ let prev_word ctx =
 let delete_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let word_end = match search_word_forward ctx with
-    | Some(idx1, idx2) ->
+    | Some(_idx1, idx2) ->
         idx2
     | None ->
       Zed_rope.length ctx.edit.text
@@ -596,7 +599,7 @@ let delete_next_word ctx =
 let delete_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let start = match search_word_backward ctx with
-    | Some(idx1, idx2) ->
+    | Some(idx1, _idx2) ->
         idx1
     | None ->
         0
@@ -606,7 +609,7 @@ let delete_prev_word ctx =
 let kill_next_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let word_end = match search_word_forward ctx with
-    | Some(idx1, idx2) ->
+    | Some(_idx1, idx2) ->
         idx2
     | None ->
       Zed_rope.length ctx.edit.text
@@ -618,7 +621,7 @@ let kill_next_word ctx =
 let kill_prev_word ctx =
   let position = Zed_cursor.get_position ctx.cursor in
   let start = match search_word_backward ctx with
-    | Some(idx1, idx2) ->
+    | Some(idx1, _idx2) ->
         idx1
     | None ->
         0
@@ -787,8 +790,8 @@ let actions = [
   Undo, "undo";
 ]
 
-let actions_to_names = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare a1 a2) actions)
-let names_to_actions = Array.of_list (List.sort (fun (a1, n1) (a2, n2) -> compare n1 n2) actions)
+let actions_to_names = Array.of_list (List.sort (fun (a1, _) (a2, _) -> compare a1 a2) actions)
+let names_to_actions = Array.of_list (List.sort (fun (_, n1) (_, n2) -> compare n1 n2) actions)
 
 let parse_insert x =
   if Zed_utf8.starts_with x "insert(" && Zed_utf8.ends_with x ")" then begin
