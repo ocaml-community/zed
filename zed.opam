@@ -15,4 +15,5 @@ build: [
   ["jbuilder" "subst"] {pinned}
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
-available: ocaml-version >= "4.02.3"
+build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
+available: [ocaml-version >= "4.02.3"]
