@@ -1,9 +1,9 @@
 opam-version: "1.2"
 maintainer: "opam-devel@lists.ocaml.org"
 authors: ["Jérémie Dimino"]
-homepage: "https://github.com/diml/zed"
-bug-reports: "https://github.com/diml/zed/issues"
-dev-repo: "git://github.com/diml/zed.git"
+homepage: "https://github.com/ocaml-community/zed"
+bug-reports: "https://github.com/ocaml-community/zed/issues"
+dev-repo: "git://github.com/ocaml-community/zed.git"
 license: "BSD3"
 depends: [
   "jbuilder" {build & >= "1.0+beta9"}
