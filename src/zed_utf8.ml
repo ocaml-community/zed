@@ -7,7 +7,7 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDyn.Camomile
+open CamomileLibraryDefault.Camomile
 
 type t = string
 exception Invalid of string * string

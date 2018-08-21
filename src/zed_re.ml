@@ -7,7 +7,7 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDyn.Camomile
+open CamomileLibraryDefault.Camomile
 
 module Re = URe.Make(Zed_rope.Text)
 
