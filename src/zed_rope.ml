@@ -7,7 +7,7 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDyn.Camomile
+open CamomileLibraryDefault.Camomile
 
 (* Maximum length of a leaf *)
 let max_leaf_size = 256

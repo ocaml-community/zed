@@ -6,14 +6,14 @@ bug-reports: "https://github.com/ocaml-community/zed/issues"
 dev-repo: "git://github.com/ocaml-community/zed.git"
 license: "BSD3"
 depends: [
-  "jbuilder" {build & >= "1.0+beta9"}
+  "dune" {build & >= "1.0.0"}
   "base-bytes"
-  "camomile" {>= "0.8"}
+  "camomile" {>= "1.0.1"}
   "react"
 ]
 build: [
-  ["jbuilder" "subst"] {pinned}
-  ["jbuilder" "build" "-p" name "-j" jobs]
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
 ]
-build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
+build-test: [["dune" "runtest" "-p" name "-j" jobs]]
 available: [ocaml-version >= "4.02.3"]

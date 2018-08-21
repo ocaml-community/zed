@@ -1,8 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name zed)
-  (wrapped false)
-  (public_name zed)
-  (flags (:standard -safe-string))
-  (libraries (bytes react camomile))))

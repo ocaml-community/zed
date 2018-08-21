@@ -281,13 +281,13 @@ val add_escaped : Buffer.t -> t -> unit
   (** [add_escaped_char buf text] is the same as [Buffer.add_string
       buf (escaped text)] but a bit more efficient. *)
 
-val escaped_string : CamomileLibraryDyn.Camomile.CharEncoding.t -> string -> t
+val escaped_string : CamomileLibraryDefault.Camomile.CharEncoding.t -> string -> t
   (** [escaped_string enc str] escape the string [str] which is
       encoded with encoding [enc]. If decoding [str] with [enc] fails,
       it escape all non-printable bytes of [str] with the syntax
       [\yAB]. *)
 
-val add_escaped_string : Buffer.t -> CamomileLibraryDyn.Camomile.CharEncoding.t -> string -> unit
+val add_escaped_string : Buffer.t -> CamomileLibraryDefault.Camomile.CharEncoding.t -> string -> unit
   (** [add_escaped_char buf enc text] is the same as
       [Buffer.add_string buf (escaped_string enc text)] but a bit more
       efficient. *)
