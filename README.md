@@ -1,6 +1,8 @@
 Zed
 ===
 
+[![Build Status](https://travis-ci.org/ocaml-community/zed.svg?branch=master)](https://travis-ci.org/ocaml-community/zed)
+
 Zed is an abstract engine for text edition. It can be used to write
 text editors, edition widgets, readlines, ... You just have to
 _connect_ an engine to your inputs and rendering functions to get an
