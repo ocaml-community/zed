@@ -2,6 +2,7 @@
  * zed_rope.mli
  * ------------
  * Copyright : (c) 2011, Jeremie Dimino <jeremie@dimino.org>
+ * Copyright : (c) 2019, ZAN DoYe <zandoye@gmail.com>
  * Licence   : BSD3
  *
  * This file is a part of Zed, an editor engine.
@@ -23,124 +24,107 @@ exception Out_of_bounds
 
 (** {6 Construction} *)
 
-val empty : t
+val empty : unit -> rope
   (** The empty rope. *)
 
-val make : int -> UChar.t -> t
-  (** [make length char] creates a rope of length [length] containing
-      only [char]. *)
+val make : int -> Zed_char.t -> rope
+  (** [make length char] creates a rope of length [length] containing only [char]. *)
 
-val init : int -> (int -> UChar.t) -> t
-  (** [init n f] returns the contenation of [singleton (f 0)],
-      [singleton (f 1)], ..., [singleton (f (n - 1))]. *)
-
-val rev_init : int -> (int -> UChar.t) -> t
-  (** [rev_init n f] returns the contenation of [singleton (f (n -
-      1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
-
-val singleton : UChar.t -> t
-  (** [singleton ch] creates a rope of length 1 containing only
-      [ch]. *)
+val singleton : Zed_char.t -> rope
+  (** [singleton ch] creates a rope of length 1 containing only [ch]. *)
 
 (** {6 Informations} *)
 
-val length : t -> int
+val length : rope -> int
   (** Returns the length of the given rope. *)
 
-val is_empty : t -> bool
-  (** [is_empty rope] returns whether [str] is the empty rope or
-      not. *)
+val size : rope -> int
+  (** Returns the size of the given rope. *)
 
-val compare : t -> t -> int
-  (** Compares two ropes (in code point order). *)
+val is_empty : rope -> bool
+  (** [is_empty rope] returns whether [str] is the empty rope or not. *)
 
-val equal : t -> t -> bool
-  (** [equal r1 r2] retuns [true] iff [r1] is equal to [r2]. *)
-
-(** {6 To/from strings} *)
-
-val of_string : string -> t
-  (** [of_string str] creates a rope from a string. The string must be
-      UTF-8 encoded and is validated. Note that [str] must not be
-      modified after this operation, if you intend to do so you must
-      copy it before passing it to [of_string]. *)
-
-val to_string : t -> string
-  (** [to_string rope] flatten a rope into a string encoded in
-      UTF-8. *)
 
 (** {6 Random access} *)
 
-val get : t -> int -> UChar.t
-  (** [get str rope] returns the character at index [idx] in
+val get : rope -> int -> Zed_char.t
+  (** [get rope idx] returns the glyph at index [idx] in [rope]. *)
+
+val get_raw : rope -> int -> UChar.t
+  (** [get_raw rope idx] returns the character at raw index [idx] in
       [rope]. *)
 
 (** {6 Rope manipulation} *)
 
-val append : t -> t -> t
+val append : rope -> rope -> rope
   (** Concatenates the two given ropes. *)
 
-val concat : t -> t list -> t
+val concat : rope -> rope list -> rope
   (** [concat sep l] concatenates all strings of [l] separating them
       by [sep]. *)
 
-val sub : t -> int -> int -> t
+val sub : rope -> int -> int -> rope
   (** [sub rope ofs len] Returns the sub-rope of [rope] starting at
       [ofs] and of length [len]. *)
 
-val break : t -> int -> t * t
+val break : rope -> int -> rope * rope
   (** [break rope pos] returns the sub-ropes before and after [pos] in
       [rope]. It is more efficient than creating two sub-ropes with
       {!sub}. *)
 
-val before : t -> int -> t
+val before : rope -> int -> rope
   (** [before rope pos] returns the sub-rope before [pos] in [rope]. *)
 
-val after : t -> int -> t
+val after : rope -> int -> rope
   (** [after rope pos] returns the sub-string after [pos] in [rope]. *)
 
-val insert : t -> int -> t -> t
+val insert : rope -> int -> rope -> rope
   (** [insert rope pos sub] inserts [sub] in [rope] at position
       [pos]. *)
 
-val remove : t -> int -> int -> t
+val insert_uChar : rope -> int -> UChar.t -> rope
+  (** [insert rope pos char] inserts [char] in [rope] at position
+      [pos]. If [char] is a combing mark, it's merged to the character
+      at position [pos-1] *)
+
+val remove : rope -> int -> int -> rope
   (** [remove rope pos len] removes the [len] characters at position
       [pos] in [rope] *)
 
-val replace : t -> int -> int -> t -> t
+val replace : rope -> int -> int -> rope -> rope
   (** [replace rope pos len repl] replaces the [len] characters at
       position [pos] in [rope] by [repl]. *)
 
-val lchop : t -> t
+val lchop : rope -> rope
   (** [lchop rope] returns [rope] without is first character. Returns
       {!empty} if [rope] is empty. *)
 
-val rchop : t -> t
+val rchop : rope -> rope
   (** [rchop rope] returns [rope] without is last character. Returns
       {!empty} if [rope] is empty. *)
 
 (** {6 Iteration, folding and mapping} *)
 
-val iter : (UChar.t -> unit) -> t-> unit
+val iter : (Zed_char.t -> unit) -> rope -> unit
   (** [iter f rope] applies [f] on all characters of [rope] starting
       from the left. *)
 
-val rev_iter : (UChar.t -> unit) -> t -> unit
+val rev_iter : (Zed_char.t -> unit) -> rope -> unit
   (** [rev_iter f rope] applies [f] an all characters of [rope]
       starting from the right. *)
 
-val fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val fold : (Zed_char.t -> 'a -> 'a) -> rope -> 'a -> 'a
   (** [fold f rope acc] applies [f] on all characters of [rope]
       starting from the left, accumulating a value. *)
 
-val rev_fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val rev_fold : (Zed_char.t -> 'a -> 'a) -> rope -> 'a -> 'a
   (** [rev_fold f rope acc] applies [f] on all characters of [rope]
       starting from the right, accumulating a value. *)
 
-val map : (UChar.t -> UChar.t) -> t -> t
+val map : (Zed_char.t -> Zed_char.t) -> rope -> rope
   (** [map f rope] maps all characters of [rope] with [f]. *)
 
-val rev_map : (UChar.t -> UChar.t) -> t -> t
+val rev_map : (Zed_char.t -> Zed_char.t) -> rope -> rope
   (** [rev_map f str] maps all characters of [rope] with [f] in
       reverse order. *)
 
@@ -149,21 +133,28 @@ val rev_map : (UChar.t -> UChar.t) -> t -> t
 (** Note: for all of the following functions, the leaves must
     absolutely not be modified. *)
 
-val iter_leaf : (Zed_utf8.t -> unit) -> t -> unit
+val iter_leaf : (Zed_string.t -> unit) -> rope -> unit
   (** [iter_leaf f rope] applies [f] on all leaves of [rope] starting
       from the left. *)
 
-val rev_iter_leaf : (Zed_utf8.t -> unit) -> t -> unit
+val rev_iter_leaf : (Zed_string.t -> unit) -> rope -> unit
   (** [iter_leaf f rope] applies [f] on all leaves of [rope] starting
       from the right. *)
 
-val fold_leaf : (Zed_utf8.t -> 'a -> 'a) -> t -> 'a -> 'a
+val fold_leaf : (Zed_string.t -> 'a -> 'a) -> rope -> 'a -> 'a
   (** [fold f rope acc] applies [f] on all leaves of [rope] starting
       from the left, accumulating a value. *)
 
-val rev_fold_leaf : (Zed_utf8.t -> 'a -> 'a) -> t -> 'a -> 'a
+val rev_fold_leaf : (Zed_string.t -> 'a -> 'a) -> rope -> 'a -> 'a
   (** [rev_fold f rope acc] applies [f] on all leaves of [rope]
       starting from the right, accumulating a value. *)
+
+
+val compare : rope -> rope -> int
+  (** Compares two ropes (in code point order). *)
+
+val equal : rope -> rope -> bool
+  (** [equal r1 r2] retuns [true] if [r1] is equal to [r2]. *)
 
 (** {6 Zippers} *)
 
@@ -171,7 +162,7 @@ module Zip : sig
   type t
     (** Type of zippers. A zipper allow to naviguate in a rope in a
         convenient and efficient manner. Note that a zipper points to
-        a position between two characters, not to a character, so in a
+        a position between two glyphs, not to a glyph, so in a
         rope of length [len] there is [len + 1] positions. *)
 
   val make_f : rope -> int -> t
@@ -185,43 +176,43 @@ module Zip : sig
   val offset : t -> int
     (** Returns the position of the zipper in the rope. *)
 
-  val next : t -> UChar.t * t
-    (** [next zipper] returns the code point at the right of the
+  val next : t -> Zed_char.t * t
+    (** [next zipper] returns the glyph at the right of the
         zipper and a zipper to the next position. It raises
         [Out_of_bounds] if the zipper points to the end of the
         rope. *)
 
-  val prev : t -> UChar.t * t
-    (** [prev zipper] returns the code point at the left of the
+  val prev : t -> Zed_char.t * t
+    (** [prev zipper] returns the glyph at the left of the
         zipper and a zipper to the previous position. It raises
         [Out_of_bounds] if the zipper points to the beginning of the
         rope. *)
 
   val move : int -> t -> t
-    (** [move n zip] moves the zipper by [n] characters. If [n] is
+    (** [move n zip] moves the zipper by [n] glyphs. If [n] is
         negative it is moved to the left and if it is positive it is
         moved to the right. It raises [Out_of_bounds] if the result
         is outside the bounds of the rope. *)
 
   val at_bos : t -> bool
-    (** [at_bos zipper] returns [true] iff [zipper] points to the
+    (** [at_bos zipper] returns [true] if [zipper] points to the
         beginning of the rope. *)
 
   val at_eos : t -> bool
-    (** [at_eos zipper] returns [true] iff [zipper] points to the
+    (** [at_eos zipper] returns [true] if [zipper] points to the
         end of the rope. *)
 
-  val find_f : (UChar.t -> bool) -> t -> t
-    (** [find_f f zip] search forward for a character to satisfy
+  val find_f : (Zed_char.t -> bool) -> t -> t
+    (** [find_f f zip] search forward for a glyph to satisfy
         [f]. It returns a zipper pointing to the left of the first
-        character to satisfy [f], or a zipper pointing to the end of
-        the rope if no such character exists. *)
+        glyph to satisfy [f], or a zipper pointing to the end of
+        the rope if no such glyph exists. *)
 
-  val find_b : (UChar.t -> bool) -> t -> t
-    (** [find_b f zip] search backward for a character to satisfy
+  val find_b : (Zed_char.t -> bool) -> t -> t
+    (** [find_b f zip] search backward for a glyph to satisfy
         [f]. It returns a zipper pointing to the right of the first
-        character to satisfy [f], or a zipper pointing to the
-        beginning of the rope if no such character exists. *)
+        glyph to satisfy [f], or a zipper pointing to the
+        beginning of the rope if no such glyph exists. *)
 
   val sub : t -> int -> rope
     (** [sub zipper len] returns the sub-rope of length [len] pointed
@@ -236,29 +227,169 @@ module Zip : sig
         the same rope. *)
 end
 
-(** {6 Buffers} *)
-
-module Buffer : sig
-
-  (** This module is similar of the [Buffer] module of the standard
-      library except that it works with rope. *)
-
+module Zip_raw : sig
   type t
-    (** Type of rope buffers. *)
+    (** Type of zippers. A zipper allow to naviguate in a rope in a
+        convenient and efficient manner. Note that a zipper points to
+        a position between two characters, not to a character, so in a
+        rope of length [len] there is [len + 1] positions. *)
 
-  val create : unit -> t
-    (** Create a new empty buffer. *)
+  val make_f : rope -> int -> t
+    (** [make_f rope pos] creates a new zipper pointing to raw positon
+        [pos] of [rope]. *)
 
-  val add : t -> UChar.t -> unit
-    (** [add buffer x] add [x] at the end of [buffer]. *)
+  val make_b : rope -> int -> t
+    (** [make_f rope pos] creates a new zipper pointing to raw positon
+        [length rope - pos] of [rope]. *)
 
-  val contents : t -> rope
-    (** [contents buffer] returns the contents of [buffer] as a
+  val offset : t -> int
+    (** Returns the raw position of the zipper in the rope. *)
+
+  val next : t -> UChar.t * t
+    (** [next zipper] returns the code point at the right of the
+        zipper and a zipper to the next raw position. It raises
+        [Out_of_bounds] if the zipper points to the end of the
         rope. *)
 
-  val reset : t -> unit
-    (** [reset buffer] resets [buffer] to its initial state. *)
+  val prev : t -> UChar.t * t
+    (** [prev zipper] returns the code point at the left of the
+        zipper and a zipper to the previous raw position. It raises
+        [Out_of_bounds] if the zipper points to the beginning of the
+        rope. *)
+
+  val move : int -> t -> t
+    (** [move n zip] moves the zipper by [n] characters. If [n] is
+        negative it is moved to the left and if it is positive it is
+        moved to the right. It raises [Out_of_bounds] if the result
+        is outside the bounds of the rope. *)
+
+  val at_bos : t -> bool
+    (** [at_bos zipper] returns [true] if [zipper] points to the
+        beginning of the rope. *)
+
+  val at_eos : t -> bool
+    (** [at_eos zipper] returns [true] if [zipper] points to the
+        end of the rope. *)
+
+  val find_f : (UChar.t -> bool) -> t -> t
+    (** [find_f f zip] search forward for a character to satisfy
+        [f]. It returns a zipper pointing to the left of the first
+        character to satisfy [f], or a zipper pointing to the end of
+        the rope if no such character exists. *)
+
+  val find_b : (UChar.t -> bool) -> t -> t
+    (** [find_b f zip] search backward for a character to satisfy
+        [f]. It returns a zipper pointing to the right of the first
+        character to satisfy [f], or a zipper pointing to the
+        beginning of the rope if no such character exists. *)
 end
 
+(** {6 Buffers} *)
+
+module String_buffer = Buffer
+
+module Buffer :
+  sig
+    type t = {
+      mutable acc : rope;
+      mutable buf : Zed_string.Buf0.buf;
+      mutable idx : int;
+    }
+    val create : unit -> t
+    val add : t -> Zed_char.t -> unit
+    val add_uChar : t -> UChar.t -> unit
+    val add_rope : t -> rope -> unit
+    val add_string : t -> Zed_string.t -> unit
+    val contents : t -> rope
+    val reset : t -> unit
+  end
+val init : int -> (int -> Zed_char.t) -> rope
+val init_from_uChars : int -> (int -> UChar.t) -> rope
+val of_string : Zed_string.t -> rope
+val to_string : rope -> Zed_string.t
+
 (** {6 Camomile compatible interface} *)
-module Text : UnicodeString.Type with type t = rope and type index = Zip.t
+
+module Text :
+  sig
+    type t = rope
+    val get : t -> int -> Zed_char.t
+    val init : int -> (int -> Zed_char.t) -> t
+    val length : t -> int
+    type index = Zip.t
+    val look : 'a -> index -> Zed_char.t
+    val nth : t -> int -> index
+    val next : 'a -> index -> index
+    val prev : 'a -> index -> index
+    val out_of_range : 'a -> index -> bool
+    val iter : (Zed_char.t -> unit) -> t -> unit
+    val compare : t -> t -> int
+    val first : t -> index
+    val last : t -> index
+    val move : 'a -> index -> int -> index
+    val compare_index : 'a -> index -> index -> int
+    module Buf :
+      sig
+        type buf = Buffer.t
+        val create : 'a -> buf
+        val contents : buf -> t
+        val clear : buf -> unit
+        val reset : buf -> unit
+        val add_char : buf -> UChar.t -> unit
+        val add_string : buf -> t -> unit
+        val add_buffer : buf -> buf -> unit
+      end
+  end
+
+module Text_core :
+  sig
+    type t = rope
+    val length : t -> int
+    type index = Zip.t
+    val nth : t -> int -> index
+    val next : 'a -> index -> index
+    val prev : 'a -> index -> index
+    val out_of_range : 'a -> index -> bool
+    val compare : t -> t -> int
+    val first : t -> index
+    val last : t -> index
+    val move : 'a -> index -> int -> index
+    val compare_index : 'a -> index -> index -> int
+    module Buf = Text.Buf
+    val get : t -> int -> UChar.t
+    val init : int -> (int -> UChar.t) -> t
+    val look : 'a -> index -> UChar.t
+    val iter : (UChar.t -> unit) -> t -> unit
+  end
+
+module Text_raw :
+  sig
+    type t = rope
+    type index = Zip_raw.t
+    val get : t -> int -> UChar.t
+    val init : int -> (int -> UChar.t) -> t
+    val length : t -> int
+    val look : 'a -> index -> UChar.t
+    val nth : t -> int -> index
+    val next : 'a -> index -> index
+    val prev : 'a -> index -> index
+    val out_of_range : 'a -> index -> bool
+    val iter : (UChar.t -> unit) -> t -> unit
+    val compare : t -> t -> int
+    val first : t -> index
+    val last : t -> index
+    val move : 'a -> index -> int -> index
+    val compare_index : 'a -> index -> index -> int
+    module Buf :
+      sig
+        type buf = Buffer.t
+        val create : 'a -> buf
+        val contents : buf -> t
+        val clear : buf -> unit
+        val reset : buf -> unit
+        val add_char : buf -> UChar.t -> unit
+        val add_string : buf -> t -> unit
+        val add_buffer : buf -> buf -> unit
+      end
+  end
+
