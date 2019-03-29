@@ -18,11 +18,19 @@ open React
 type t
   (** Type of a cursor. *)
 
+type changes= {
+  position: int;
+  added: int;
+  removed: int;
+  added_width: int;
+  removed_width: int;
+}
+
 exception Out_of_bounds
   (** Exception raised when trying to move a cursor outside the bounds
       of the text it points to. *)
 
-val create : int -> (int * int * int) event -> (unit -> Zed_lines.t) -> int -> int -> t
+val create : int -> changes event -> (unit -> Zed_lines.t) -> int -> int -> t
   (** [create length changes get_lines position wanted_column] creates
       a new cursor pointing to position [position].
 
@@ -64,16 +72,31 @@ val column : t -> int signal
   (** [column cursor] returns the signal holding the current column of
       the cursor. *)
 
+val column_display : t -> int React.signal
+  (** [column_display cursor] returns the signal holding the current display column of
+      the cursor. *)
+
 val get_column : t -> int
   (** [get_column cursor] returns the current column of the cursor. *)
+
+val get_column_display : t -> int
+  (** [get_column_display cursor] returns the current display column of the cursor. *)
 
 val coordinates : t -> (int * int) signal
   (** [coordinates cursor] returns the signal holding the current
       line & column of the cursor. *)
 
+val coordinates_display : t -> (int * int) React.signal
+  (** [coordinates cursor] returns the signal holding the current
+      line & display column of the cursor. *)
+
 val get_coordinates : t -> int * int
   (** [get_coordinates cursor] returns the
       current line & column of the cursor. *)
+
+val get_coordinates_display : t -> int * int
+  (** [get_coordinates_display cursor] returns the
+      current line & display column of the cursor. *)
 
 val wanted_column : t -> int signal
   (** [wanted_column cursor] returns the signal holding the column on

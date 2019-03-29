@@ -27,6 +27,12 @@ type clipboard = {
 val new_clipboard : unit -> clipboard
   (** [new_clipboard ()] creates a new clipboard using a reference. *)
 
+val regexp_word_core : Zed_re.Core.t
+  (** regexp to core-match a word a-z, A-Z, 0-9 *)
+
+val regexp_word_raw : Zed_re.Raw.t
+  (** regexp to raw-match a word a-z, A-Z, 0-9 *)
+
 val create :
   ?editable : (int -> int -> bool) ->
   ?move : (int -> int -> int) ->
@@ -56,8 +62,12 @@ val create :
       [undo_size] is the size of the undo buffer. It is the number of
       state zed will remember. It defaults to [1000]. *)
 
-val match_by_regexp : Zed_re.t -> Zed_rope.t -> int -> int option
-  (** [match_by_regexp re] creates a word-matching function using a
+val match_by_regexp_core : Zed_re.Core.t -> Zed_rope.t -> int -> int option
+  (** [match_by_regexp_core re] creates a core-word-matching function using a
+      regular expression. *)
+
+val match_by_regexp_raw : Zed_re.Raw.t -> Zed_rope.t -> int -> int option
+  (** [match_by_regexp_raw re] creates a raw-word-matching function using a
       regular expression. *)
 
 (** {6 State} *)
@@ -84,7 +94,7 @@ val get_line : 'a t -> int -> Zed_rope.t
   (** [get_line edit n] returns the rope corresponding to the [n]th line
       without the newline character. *)
 
-val changes : 'a t -> (int * int * int) event
+val changes : 'a t -> Zed_cursor.changes  event
   (** [changes edit] returns an event which occurs with values of the
       form [(start, added, removed)] when the contents of the engine
       changes. [start] is the start of modifications, [added] is the
@@ -187,6 +197,9 @@ val line : 'a context -> int
 val column : 'a context -> int
   (** [column ctx] returns the column of the cursor. *)
 
+val column_display : 'a context -> int
+  (** [column_display ctx] returns the display column of the cursor. *)
+
 val at_bol : 'a context -> bool
   (** [at_bol ctx] returns [true] iff the cursor is at the beginning
       of the current line. *)
@@ -205,6 +218,9 @@ val at_eot : 'a context -> bool
 
 val insert : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
+
+val insert_char : 'a context -> UChar.t -> unit
+  (** [insert ctx rope] inserts the given UChar at current position. *)
 
 val insert_no_erase : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position but
@@ -353,7 +369,7 @@ val undo : 'a context -> unit
 
 (** Type of actions. *)
 type action =
-  | Insert of UChar.t
+  | Insert of Zed_char.t
   | Newline
   | Next_char
   | Prev_char

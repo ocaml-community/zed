@@ -11,19 +11,29 @@ open React
 
 exception Out_of_bounds
 
+type changes= {
+  position: int;
+  added: int;
+  removed: int;
+  added_width: int;
+  removed_width: int;
+}
+
 type action =
   | User_move of int
-  | Text_modification of (int * int * int) (* start, added, removed *)
+  | Text_modification of changes (* start, added, removed *)
 
 type t = {
   position : int signal;
   send : action -> unit;
   length : int ref;
-  changes : (int * int * int) event;
+  changes :  changes event;
   get_lines : unit -> Zed_lines.t;
   coordinates : (int * int) signal;
+  coordinates_display : (int * int) signal;
   line : int signal;
   column : int signal;
+  column_display : int signal;
   wanted_column : int signal;
   set_wanted_column : int -> unit;
 }
@@ -35,19 +45,19 @@ let create length changes get_lines position wanted_column =
   let update_position position action =
     match action with
     | User_move pos -> pos
-    | Text_modification (start, added, removed) ->
-      let delta = added - removed in
+    | Text_modification changes ->
+      let delta = changes.added - changes.removed in
       length := !length + delta;
       if !length < 0 then raise Out_of_bounds;
       (* Move the cursor if it is after the start of the changes. *)
-      if position > start then begin
+      if position > changes.position then begin
         if delta >= 0 then
           (* Text has been inserted, advance the cursor. *)
           position + delta
-        else if position < start - delta  then
+        else if position < changes.position - delta  then
           (* Text has been removed and the removed block contains the
              cursor, move it at the beginning of the removed block. *)
-          start
+          changes.position
         else
           (* Text has been removed before the cursor, move back the
              cursor. *)
@@ -59,12 +69,20 @@ let create length changes get_lines position wanted_column =
   let position =
     S.fold update_position position (E.select [user_moves; text_modifications])
   in
-  let compute_coordinates position =
+  let compute_coordinates_and_display position =
     let lines = get_lines () in
     let index = Zed_lines.line_index lines position in
-    (index, position - Zed_lines.line_start lines index)
+    let bol= Zed_lines.line_start lines index in
+    let column= position - bol in
+    let width= Zed_lines.force_width lines bol column in
+    (index, column, bol, width)
   in
-  let coordinates = S.map compute_coordinates position in
+  let coordinates_and_display= S.map compute_coordinates_and_display position in
+  let coordinates = S.map (fun (row, column,_,_)-> (row, column)) coordinates_and_display in
+  let coordinates_display = S.map (fun (row,_,_,width)-> (row, width)) coordinates_and_display in
+  let line= S.map fst coordinates in
+  let column= S.map snd coordinates in
+  let column_display= S.map snd coordinates_display in
   let wanted_column, set_wanted_column = S.create wanted_column in
   {
     position;
@@ -73,8 +91,10 @@ let create length changes get_lines position wanted_column =
     changes;
     get_lines;
     coordinates;
-    line = S.map fst coordinates;
-    column = S.map snd coordinates;
+    coordinates_display;
+    line;
+    column;
+    column_display;
     wanted_column;
     set_wanted_column;
   }
@@ -92,9 +112,13 @@ let get_position cursor = S.value cursor.position
 let line cursor = cursor.line
 let get_line cursor = S.value cursor.line
 let column cursor = cursor.column
+let column_display cursor = cursor.column_display
 let get_column cursor = S.value cursor.column
+let get_column_display cursor = S.value cursor.column_display
 let coordinates cursor = cursor.coordinates
+let coordinates_display cursor = cursor.coordinates
 let get_coordinates cursor = S.value cursor.coordinates
+let get_coordinates_display cursor = S.value cursor.coordinates_display
 let wanted_column cursor = cursor.wanted_column
 let get_wanted_column cursor = S.value cursor.wanted_column
 let set_wanted_column cursor column = cursor.set_wanted_column column
@@ -105,7 +129,7 @@ let move cursor ?(set_wanted_column=true) delta =
     raise Out_of_bounds
   else begin
     cursor.send (User_move new_position);
-    if set_wanted_column then cursor.set_wanted_column (S.value cursor.column)
+    if set_wanted_column then cursor.set_wanted_column (S.value cursor.column_display)
   end
 
 let goto cursor ?(set_wanted_column=true) position =
@@ -113,5 +137,5 @@ let goto cursor ?(set_wanted_column=true) position =
     raise Out_of_bounds
   else begin
     cursor.send (User_move position);
-    if set_wanted_column then cursor.set_wanted_column (S.value cursor.column)
+    if set_wanted_column then cursor.set_wanted_column (S.value cursor.column_display)
   end

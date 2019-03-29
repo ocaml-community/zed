@@ -10,7 +10,7 @@
 open CamomileLibraryDefault.Camomile
 open React
 
-module CaseMap = CaseMap.Make(Zed_rope.Text)
+module CaseMap = CaseMap.Make(Zed_rope.Text_core)
 
 (* +-----------------------------------------------------------------+
    | Types                                                           |
@@ -31,8 +31,8 @@ type 'a t = {
   mutable lines : Zed_lines.t;
   (* The set of line position of [text]. *)
 
-  changes : (int * int * int) event;
-  send_changes : (int * int * int) -> unit;
+  changes : Zed_cursor.changes event;
+  send_changes : Zed_cursor.changes -> unit;
   (* Changes of the contents. *)
 
   erase_mode : bool signal;
@@ -58,9 +58,9 @@ type 'a t = {
   locale : string option signal;
   (* The buffer's locale. *)
 
-  undo : (Zed_rope.t * Zed_lines.t * int * int * int * int) array;
+  undo : (Zed_rope.t * Zed_lines.t * int * int * int * int * int * int) array;
   (* The undo buffer. It is an array of element of the form [(text,
-     lines, pos, new_pos, added, removed)]. *)
+     lines, pos, new_pos, added, removed, added_width, removed_width)]. *)
 
   undo_size : int;
   (* Size of the undo buffer. *)
@@ -81,29 +81,45 @@ type 'a t = {
 
 let dummy_cursor = Zed_cursor.create 0 E.never (fun () -> Zed_lines.empty) 0 0
 
-let match_by_regexp re rope idx =
-  match Zed_re.regexp_match ~sem:`Longest re rope idx with
+let match_by_regexp_core re rope idx =
+  match Zed_re.Core.regexp_match ~sem:`Longest re rope idx with
+  | None ->
+    None
+  | Some arr ->
+    match arr.(0) with
+    | Some(_zip1, zip2) ->
+      Some(Zed_rope.Zip.offset zip2)
     | None ->
-        None
-    | Some arr ->
-        match arr.(0) with
-          | Some(_zip1, zip2) ->
-              Some(Zed_rope.Zip.offset zip2)
-          | None ->
-              None
+      None
 
-let regexp_word =
+let match_by_regexp_raw re rope idx =
+  match Zed_re.Raw.regexp_match ~sem:`Longest re rope idx with
+  | None ->
+    None
+  | Some arr ->
+    match arr.(0) with
+    | Some(_zip1, zip2) ->
+      Some(Zed_rope.Zip_raw.offset zip2)
+    | None ->
+      None
+
+let regexp_word_core =
   let set = UCharInfo.load_property_set `Alphabetic in
   let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
-  Zed_re.compile (`Repn(`Set set, 1, None))
+  Zed_re.Core.compile (`Repn(`Set set, 1, None))
+
+let regexp_word_raw =
+  let set = UCharInfo.load_property_set `Alphabetic in
+  let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
+  Zed_re.Raw.compile (`Repn(`Set set, 1, None))
 
 let new_clipboard () =
-  let r = ref Zed_rope.empty in
+  let r = ref (Zed_rope.empty ()) in
   { clipboard_get = (fun () -> !r);
     clipboard_set = (fun x -> r := x) }
 
 
-let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp regexp_word) ?(locale = S.const None) ?(undo_size = 1000) () =
+let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp_core regexp_word_core) ?(locale = S.const None) ?(undo_size = 1000) () =
   (* I'm not sure how to disable the unused warning with ocaml.warning and the
      argument can't be removed as it's part of the interface *)
   let _ = move in
@@ -119,7 +135,7 @@ let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_wo
   in
   let edit = {
     data = None;
-    text = Zed_rope.empty;
+    text = Zed_rope.empty ();
     lines = Zed_lines.empty;
     changes;
     send_changes;
@@ -132,7 +148,7 @@ let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_wo
     set_selection;
     match_word;
     locale;
-    undo = Array.make undo_size (Zed_rope.empty, Zed_lines.empty, 0, 0, 0, 0);
+    undo = Array.make undo_size (Zed_rope.empty (), Zed_lines.empty, 0, 0, 0, 0, 0, 0);
     undo_size;
     undo_start = 0;
     undo_index = 0;
@@ -254,6 +270,9 @@ let line ctx =
 let column ctx =
   Zed_cursor.get_column ctx.cursor
 
+let column_display ctx =
+  Zed_cursor.get_column_display ctx.cursor
+
 let at_bol ctx =
   Zed_cursor.get_column ctx.cursor = 0
 
@@ -271,16 +290,16 @@ let at_bot ctx =
 let at_eot ctx =
   Zed_cursor.get_position ctx.cursor = Zed_rope.length ctx.edit.text
 
-let modify { edit ; _ } text lines position new_position added removed =
+let modify { edit ; _ } text lines position new_position added removed added_width removed_width=
   if edit.undo_size > 0 then begin
-    edit.undo.(edit.undo_index) <- (text, lines, position, new_position, added, removed);
+    edit.undo.(edit.undo_index) <- (text, lines, position, new_position, added, removed, added_width, removed_width);
     edit.undo_index <- (edit.undo_index + 1) mod edit.undo_size;
     if edit.undo_count = edit.undo_size then
       edit.undo_start <- (edit.undo_start + 1) mod edit.undo_size
     else
       edit.undo_count <- edit.undo_count + 1
   end;
-  edit.send_changes (position, added, removed)
+  edit.send_changes {position; added; removed; added_width; removed_width }
 
 let insert ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
@@ -290,31 +309,51 @@ let insert ctx rope =
     if S.value ctx.edit.erase_mode then begin
       let text_len = Zed_rope.length ctx.edit.text in
       if position + len > text_len then begin
+        let orig_width= Zed_string.(aval_width (width Zed_rope.(to_string (sub text position (text_len-position))))) in
+        let curr_width= Zed_string.(aval_width (width Zed_rope.(to_string rope))) in
         ctx.edit.text <- Zed_rope.replace text position (text_len - position) rope;
         ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position (text_len - position) (Zed_lines.of_rope rope);
-        modify ctx text lines position position len (text_len - position)
+        modify ctx text lines position position len (text_len - position) curr_width orig_width
       end else begin
+        let orig_width= Zed_string.(aval_width (width Zed_rope.(to_string (sub text position len)))) in
+        let curr_width= Zed_string.(aval_width (width Zed_rope.(to_string rope))) in
         ctx.edit.text <- Zed_rope.replace text position len rope;
         ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len (Zed_lines.of_rope rope);
-        modify ctx text lines position position len len;
+        modify ctx text lines position position len len curr_width orig_width;
       end;
       move ctx len
     end else begin
+      let width_add= Zed_string.aval_width (Zed_string.width (Zed_rope.to_string rope)) in
       ctx.edit.text <- Zed_rope.insert ctx.edit.text position rope;
       ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
-      modify ctx text lines position position len 0;
+      modify ctx text lines position position len 0 width_add 0;
       move ctx len
     end
   end else
     raise Cannot_edit
 
+let insert_char ctx ch =
+  match Zed_char.prop_uChar ch with
+  | Printable 0->
+    let position = Zed_cursor.get_position ctx.cursor in
+    if not ctx.check || ctx.edit.editable position 0 then begin
+      let text = ctx.edit.text and lines = ctx.edit.lines in
+      ctx.edit.text <- Zed_rope.insert_uChar ctx.edit.text position ch;
+      modify ctx text lines position position 1 1 0 0;
+      move ctx 0;
+      next_line_n ctx 0;
+    end else
+      raise Cannot_edit
+  | _-> insert ctx (Zed_rope.of_string (fst (Zed_string.of_uChars [ch])))
+
 let insert_no_erase ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
   if not ctx.check || ctx.edit.editable position 0 then begin
     let len = Zed_rope.length rope and text = ctx.edit.text and lines = ctx.edit.lines in
+    let width_add= Zed_string.aval_width (Zed_string.width (Zed_rope.to_string rope)) in
     ctx.edit.text <- Zed_rope.insert text position rope;
     ctx.edit.lines <- Zed_lines.insert ctx.edit.lines position (Zed_lines.of_rope rope);
-    modify ctx text lines position position len 0;
+    modify ctx text lines position position len 0 width_add 0;
     move ctx len
   end else
     raise Cannot_edit
@@ -325,9 +364,10 @@ let remove_next ctx len =
   let len = if position + len > text_len then text_len - position else len in
   if not ctx.check || ctx.edit.editable position len then begin
     let text = ctx.edit.text and lines = ctx.edit.lines in
+    let width_remove= Zed_string.(aval_width (width Zed_rope.(to_string (sub text position len)))) in
     ctx.edit.text <- Zed_rope.remove text position len;
     ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
-    modify ctx text lines position position 0 len;
+    modify ctx text lines position position 0 len 0 width_remove;
   end else
     raise Cannot_edit
 
@@ -336,9 +376,10 @@ let remove_prev ctx len =
   let len = min position len in
   if not ctx.check || ctx.edit.editable (position - len) len then begin
     let text = ctx.edit.text and lines = ctx.edit.lines in
+    let width_remove= Zed_string.(aval_width (width Zed_rope.(to_string (sub text (position-len) len)))) in
     ctx.edit.text <- Zed_rope.remove text (position - len) len;
     ctx.edit.lines <- Zed_lines.remove ctx.edit.lines (position - len) len;
-    modify ctx text lines (position - len) position 0 len;
+    modify ctx text lines (position - len) position 0 len 0 width_remove;
   end else
     raise Cannot_edit
 
@@ -350,15 +391,22 @@ let replace ctx len rope =
   let len = if position + len > text_len then text_len - position else len in
   if not ctx.check || ctx.edit.editable position len then begin
     let rope_len = Zed_rope.length rope and text = ctx.edit.text and lines = ctx.edit.lines in
+    let orig_width= Zed_string.(aval_width (width Zed_rope.(to_string (sub text position len)))) in
+    let curr_width= Zed_string.(aval_width (width Zed_rope.(to_string rope))) in
     ctx.edit.text <- Zed_rope.replace text position len rope;
     ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len (Zed_lines.of_rope rope);
-    modify ctx text lines position position rope_len len;
+    modify ctx text lines position position rope_len len curr_width orig_width;
     move ctx rope_len
   end else
     raise Cannot_edit
 
-let newline_rope =
-  Zed_rope.singleton (UChar.of_char '\n')
+let newline_rope = Zed_rope.singleton
+  { core= UChar.of_char '\n';
+    combined= [];
+    width= -1;
+    size= 1;
+  }
+
 
 let newline ctx =
   insert ctx newline_rope
@@ -638,13 +686,13 @@ let undo { check; edit; cursor } =
       else
         edit.undo_index - 1
     in
-    let text, lines, pos, new_pos, added, removed = edit.undo.(index) in
+    let text, lines, pos, new_pos, added, removed, added_width, removed_width = edit.undo.(index) in
     if not check || edit.editable pos added then begin
       edit.undo_count <- edit.undo_count - 1;
       edit.undo_index <- index;
       edit.text <- text;
       edit.lines <- lines;
-      edit.send_changes (pos, removed, added);
+      edit.send_changes {position= pos; removed; added; added_width; removed_width };
       Zed_cursor.goto cursor new_pos
     end else
       raise Cannot_edit
@@ -655,7 +703,7 @@ let undo { check; edit; cursor } =
    +-----------------------------------------------------------------+ *)
 
 type action =
-  | Insert of UChar.t
+  | Insert of Zed_char.t
   | Newline
   | Next_char
   | Prev_char
@@ -689,7 +737,10 @@ type action =
   | Undo
 
 let get_action = function
-  | Insert ch -> (fun ctx -> insert ctx (Zed_rope.singleton ch))
+  | Insert ch -> (fun ctx ->
+      if Zed_char.length ch = 1
+      then insert_char ctx ch.core
+      else insert ctx (Zed_rope.singleton ch))
   | Newline -> newline
   | Next_char -> next_char
   | Prev_char -> prev_char
@@ -797,7 +848,7 @@ let parse_insert x =
   if Zed_utf8.starts_with x "insert(" && Zed_utf8.ends_with x ")" then begin
     let str = String.sub x 7 (String.length x - 8) in
     if String.length str = 1 && Char.code str.[0] < 128 then
-      Insert(UChar.of_char str.[0])
+      Insert(Zed_char.unsafe_of_uChar (UChar.of_char str.[0]))
     else if String.length str > 2 && str.[0] = 'U' && str.[1] = '+' then
       let acc = ref 0 in
       for i = 2 to String.length str - 1 do
@@ -809,7 +860,7 @@ let parse_insert x =
                               | _ -> raise Not_found)
       done;
       try
-        Insert(UChar.of_int !acc)
+        Insert(Zed_char.unsafe_of_uChar (UChar.of_int !acc))
       with _ ->
         raise Not_found
     else
@@ -851,9 +902,9 @@ let name_of_action x =
   in
   match x with
     | Insert ch ->
-        let code = UChar.code ch in
+        let code = UChar.code ch.core in
         if code <= 255 then
-          let ch = Char.chr (UChar.code ch) in
+          let ch = Char.chr (UChar.code ch.core) in
           match ch with
             | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
                 Printf.sprintf "insert(%c)" ch
@@ -865,3 +916,4 @@ let name_of_action x =
           Printf.sprintf "insert(U+%06x)" code
     | _ ->
         loop 0 (Array.length actions_to_names)
+
