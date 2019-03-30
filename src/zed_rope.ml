@@ -24,7 +24,7 @@ type t=
   | Node of int * (int * int) * t * (int * int) * t
     (* [Node(depth, (length_left, size_left), left, (length_right, size_right), right)] *)
 
-type rope= t 
+type rope= t
 
 let empty ()= Leaf (Zed_string.empty (), (0, 0))
 
@@ -275,7 +275,7 @@ let replace rope pos len repl =
 
 let insert_uChar rope pos ch =
   let open CamomileLibraryDefault.Camomile in
-  if UChar.code ch = 0 then 
+  if UChar.code ch = 0 then
     rope
   else
     match CharInfo_width.width ch with
@@ -850,10 +850,10 @@ module Buffer = struct
       let size= Zed_string.size str in
       buffer.acc <- append buffer.acc (Leaf(str, (max_leaf_size,size)));
       Zed_string.Buf.reset buffer.buf;
-      Zed_string.Buf.add_yChar buffer.buf x;
+      Zed_string.Buf.add_zChar buffer.buf x;
       buffer.idx <- Zed_string.Buf.contents_len buffer.buf
     end else begin
-      Zed_string.Buf.add_yChar buffer.buf x;
+      Zed_string.Buf.add_zChar buffer.buf x;
       buffer.idx <- Zed_string.Buf.contents_len buffer.buf
     end
 
@@ -910,9 +910,9 @@ let init_from_uChars len f=
       else []
     in
     let uChars= create len in
-    let yChars, _= Zed_string.yChars_of_uChars uChars in
+    let zChars, _= Zed_char.zChars_of_uChars uChars in
     let buf = Buffer.create () in
-    List.iter (Buffer.add buf) yChars;
+    List.iter (Buffer.add buf) zChars;
     Buffer.contents buf
   | _-> raise (Invalid_argument "Zed_rope.init_from_uChars")
 

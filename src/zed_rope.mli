@@ -292,7 +292,7 @@ module Buffer :
   sig
     type t = {
       mutable acc : rope;
-      mutable buf : Zed_string.Buf0.buf;
+      mutable buf : Zed_string.Buf.buf;
       mutable idx : int;
     }
     val create : unit -> t

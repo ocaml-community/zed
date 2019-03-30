@@ -21,7 +21,6 @@ module Zed_string0 = struct
     module Width0 = CharInfo_width.String(UCharArray0)
 
     include UCharArray0
-    let width= Width0.width
   end
 
 
@@ -63,14 +62,6 @@ module Zed_string0 = struct
     |> List.map Zed_char.to_array
     |> Array.concat
 
-  let charsL_to_raw_list t= t
-    |> List.map Zed_char.to_raw
-    |> List.concat
-
-  let charsL_to_raw_array t= t
-    |> List.map Zed_char.to_array
-    |> Array.concat
-
   let chars_to_raw_list t= t
     |> Array.to_list
     |> List.map Zed_char.to_raw
@@ -86,22 +77,16 @@ module Zed_string0 = struct
   let get t i= t.chars.(i)
   let get_raw t i=
     let rec get pos offset=
-      let yChar= t.chars.(pos) in
-      if i < offset + yChar.size then
-        Zed_char.get yChar (i - offset)
+      let zChar= t.chars.(pos) in
+      if i < offset + zChar.size then
+        Zed_char.get zChar (i - offset)
       else
-        get (pos+1) (offset + yChar.size)
+        get (pos+1) (offset + zChar.size)
     in
     get 0 0
 
 
   let empty ()= { chars= [||]; width= Ok {len= 0; width= 0}; size= 0 }
-
-  let rec yChars_of_uChars uChars=
-    match Zed_char.of_uChars uChars with
-    | None, tl-> [], tl
-    | Some yChar, tl-> let yChars, tl= yChars_of_uChars tl in
-      yChar :: yChars, tl
 
   let calc_width ?(start=0) ?num (chars: Zed_char.t array)=
     let length= Array.length chars in
@@ -150,8 +135,8 @@ module Zed_string0 = struct
         else []
       in
       let uChars= create len in
-      let yChars, _= yChars_of_uChars uChars in
-      let chars= Array.of_list yChars in
+      let zChars, _= Zed_char.zChars_of_uChars uChars in
+      let chars= Array.of_list zChars in
       let width= calc_width chars
       and size= calc_size' chars in
       {  chars; width; size }
@@ -160,8 +145,11 @@ module Zed_string0 = struct
 
   let length t= Array.length t.chars
 
-  let width t= t.width
-  let width_from start str= calc_width ~start str.chars
+  let width ?start t=
+    match start with
+    | None-> t.width
+    | _-> calc_width ?start t.chars
+
   let size t= t.size
 
     let add_width w1 w2=
@@ -176,8 +164,8 @@ module Zed_string0 = struct
     (+) 0 (Array.map Zed_char.width chars)
 
   let of_uChars uChars=
-    let yChars, uChars= yChars_of_uChars uChars in
-    let chars= Array.of_list yChars in
+    let zChars, uChars= Zed_char.zChars_of_uChars uChars in
+    let chars= Array.of_list zChars in
     let width= calc_width chars
     and size= calc_size' chars in
     { chars; width; size }, uChars
@@ -193,21 +181,6 @@ module Zed_string0 = struct
     let width= calc_width chars
     and size= calc_size' chars in
     { chars; width; size }
-
-  module US0(US:UnicodeString.Type) = struct
-    module Convert = Zed_utils.Convert(US)
-    let of_t t= t.chars |> chars_to_raw_list |> Convert.of_list
-    let to_t us=
-      let len= US.length us in
-      let rec create i=
-        if i < len
-        then US.get us i :: create (i+1)
-        else []
-      in
-      let uChars= create 0 in
-      of_uChars uChars
-    let to_t_exn us= let t,_= to_t us in t
-  end
 
   let check_range t n= n >= 0 && n <= length t
 
@@ -295,7 +268,7 @@ module Zed_string0 = struct
       { chars; width; size }
 
   let after s i=
-    let len= length s in 
+    let len= length s in
     if i < len then
       sub s i (len-i)
     else
@@ -325,6 +298,21 @@ module Zed_string0 = struct
     and width= add_width s1.width s2.width
     and size= s1.size + s2.size in
     { chars; width; size }
+
+  module US0(US:UnicodeString.Type) = struct
+    module Convert = Zed_utils.Convert(US)
+    let of_t t= t.chars |> chars_to_raw_list |> Convert.of_list
+    let to_t us=
+      let len= US.length us in
+      let rec create i=
+        if i < len
+        then US.get us i :: create (i+1)
+        else []
+      in
+      let uChars= create 0 in
+      of_uChars uChars
+    let to_t_exn us= let t,_= to_t us in t
+  end
 
   module Buf0 = struct
     type buf= {
@@ -383,16 +371,16 @@ module Zed_string0 = struct
       b.buffer <- b.initial_buffer;
       b.length <- Array.length b.buffer
 
-    let add_yChar b yChar=
+    let add_zChar b zChar=
       if b.position >= b.length then resize b 1;
-      b.buffer.(b.position) <- yChar;
+      b.buffer.(b.position) <- zChar;
       b.position <- b.position + 1
 
-    let add_uChar b uChar= 
+    let add_uChar b uChar=
       if b.position > 0 then
-        let yChar= b.buffer.(b.position-1) in
-        match Zed_char.mix_uChar yChar uChar with
-        | Ok yChar-> b.buffer.(b.position-1) <- yChar
+        let zChar= b.buffer.(b.position-1) in
+        match Zed_char.mix_uChar zChar uChar with
+        | Ok zChar-> b.buffer.(b.position-1) <- zChar
         | Error new_char->
           if b.position >= b.length then resize b 1;
           b.buffer.(b.position) <- new_char;
@@ -426,31 +414,31 @@ module US_Core = struct
   let get t i= t.chars.(i).core
   let init= init_from_uChars
   let iter f t= Array.iter
-    (fun yChar-> f yChar.Zed_char.core)
+    (fun zChar-> f zChar.Zed_char.core)
     t.chars
   let compare t1 t2= Zed_utils.array_compare
     ~compare:Zed_char.compare_core
     t1.chars t2.chars
 
-  let to_raw_list t= t.chars
+  let to_list t= t.chars
     |> Array.to_list
     |> List.map (fun c-> c.Zed_char.core)
 
-  let to_raw_array t= t.chars
+  let to_array t= t.chars
     |> Array.map (fun c-> c.Zed_char.core)
 
-  let charsL_to_raw_list t= t
+  let charsL_to_list t= t
     |> List.map (fun c-> c.Zed_char.core)
 
-  let charsL_to_raw_array t= t
+  let charsL_to_array t= t
     |> List.map (fun c-> c.Zed_char.core)
     |> Array.of_list
 
-  let chars_to_raw_list t= t
+  let chars_to_list t= t
     |> Array.to_list
     |> List.map (fun c-> c.Zed_char.core)
 
-  let chars_to_raw_array t= t
+  let chars_to_array t= t
     |> Array.map (fun c-> c.Zed_char.core)
 
 
@@ -467,9 +455,7 @@ module US_Core = struct
 end
 
 module US_Raw = struct
-  type width= Zed_string0.width
   type t= Zed_string0.t
-
   let memory_get ()=
     let open Zed_string0 in
     let last= ref (empty ())
@@ -484,7 +470,7 @@ module US_Raw = struct
     in
     get
 
-  let get= memory_get ()
+  let get= Zed_string0.get_raw (* memory_get () *)
   let init= Zed_string0.init_from_uChars
   let length t= Array.fold_left (+) 0 (Array.map Zed_char.length t.Zed_string0.chars)
 
@@ -554,9 +540,9 @@ module US_Raw = struct
     else compare o1 o2
 
   let iter f t= Array.iter
-    (fun (yChar:Zed_char.t)->
-      f yChar.core;
-      List.iter f yChar.combined)
+    (fun (zChar:Zed_char.t)->
+      f zChar.core;
+      List.iter f zChar.combined)
     t.Zed_string0.chars
 
 
