@@ -52,6 +52,7 @@ let prop t= prop_uChar t.core
 let length t= 1 + List.length t.combined
 let width t= t.width
 let size t= t.size
+
 let calc_size' l= List.length l + 1
 let calc_size t= calc_size' t.combined
 let out_of_range t i= i < 0 || i >= t.size
@@ -68,7 +69,7 @@ let get_opt t i=
 
 let append ch mark=
   match prop_uChar mark with
-  | Printable 0-> 
+  | Printable 0->
     let combined= List.append ch.combined [mark]
     and size= ch.size + 1 in
     { ch with combined; size }
@@ -80,11 +81,11 @@ let compare_raw t1 t2= Zed_utils.list_compare
   ~compare:UChar.compare
   (to_raw t1) (to_raw t2)
 
-let mix_uChar yChar uChar=
+let mix_uChar zChar uChar=
   match prop_uChar uChar with
   | Printable 0->
-    let combined= List.append yChar.combined [uChar] in
-    Ok { yChar with combined; size= yChar.size + 1 }
+    let combined= List.append zChar.combined [uChar] in
+    Ok { zChar with combined; size= zChar.size + 1 }
   | Other->
     let new_char= { core= uChar; combined= []; width= -1; size= 1 } in
     Error new_char
@@ -132,6 +133,12 @@ let of_uChars uChars=
     Some { core= uChar; combined= []; width= 0; size= 1 }, tl
   | Some (Other, uChar), tl->
     Some { core= uChar; combined= []; width= -1; size= 1 }, tl
+
+let rec zChars_of_uChars uChars=
+  match of_uChars uChars with
+  | None, tl-> [], tl
+  | Some zChar, tl-> let zChars, tl= zChars_of_uChars tl in
+    zChar :: zChars, tl
 
 let unsafe_of_char c=
   let core= UChar.of_char c in
