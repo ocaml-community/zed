@@ -51,6 +51,10 @@ val of_uChars :
   UChar.t list -> t * UChar.t list
 val of_char_list : Zed_char.t list -> t
 val of_char_array : Zed_char.t array -> t
+val for_all : (Zed_char.t -> bool) -> t -> bool
+  (** [for_all p zStr] checks if all Zed_char.t in [zStr]
+   satisfy the predicate [p]. *)
+
 
 val iter : (Zed_char.t -> unit) -> t -> unit
 val rev_iter : (Zed_char.t -> unit) -> t -> unit
@@ -75,6 +79,7 @@ val after : t -> int -> t
 val unsafe_sub_equal : t -> int -> t -> int -> bool
 val starts_with : prefix:t -> t -> bool
 val append : t -> t -> t
+val ends_with : t -> t -> bool
 
 module US :
   functor (US : UnicodeString.Type) ->
