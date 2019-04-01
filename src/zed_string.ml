@@ -182,6 +182,8 @@ module Zed_string0 = struct
     and size= calc_size' chars in
     { chars; width; size }
 
+  let for_all p str= Array.for_all p str.chars
+
   let check_range t n= n >= 0 && n <= length t
 
   let look t i= t.chars.(i).core
@@ -298,6 +300,14 @@ module Zed_string0 = struct
     and width= add_width s1.width s2.width
     and size= s1.size + s2.size in
     { chars; width; size }
+
+  let ends_with str ends=
+    let len_s= length str
+    and len_e= length ends in
+    if len_s >= len_e then
+      let start= len_s - len_e in
+      compare (sub str start len_e) ends = 0
+    else false
 
   module US0(US:UnicodeString.Type) = struct
     module Convert = Zed_utils.Convert(US)
