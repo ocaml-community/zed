@@ -81,6 +81,8 @@ let compare_raw t1 t2= Zed_utils.list_compare
   ~compare:UChar.compare
   (to_raw t1) (to_raw t2)
 
+let compare= compare_raw
+
 let mix_uChar zChar uChar=
   match prop_uChar uChar with
   | Printable 0->
@@ -154,6 +156,8 @@ let unsafe_of_uChar uChar=
     width= CharInfo_width.width uChar;
     size= 1;
   }
+
+let for_all p ch= p ch.core && List.for_all p ch.combined
 
 module US(US:UnicodeString.Type) = struct
   module Convert = Zed_utils.Convert(US)
