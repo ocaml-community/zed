@@ -69,6 +69,9 @@ val compare_core : t -> t -> int
 val compare_raw : t -> t -> int
   (** [compare_raw ch1 ch2] compares over the internal characters of ch1 and ch2 sequentially *)
 
+val compare : t -> t -> int
+  (** Alias of compare_raw *)
+
 val mix_uChar : t -> UChar.t -> (t, t) result
   (** [mix_uChar ch uChar] tries to append [uChar] ch and returns [Ok result]. If [uChar] is not a combining mark, then an [Error (Zed_char.t consists of uChar) is returned. *)
 
@@ -83,6 +86,10 @@ val unsafe_of_char : char -> t
 
 val unsafe_of_uChar : UChar.t -> t
   (** [unsafe_of_uChar ch] returns a Zed_char.t whose core is [ch]  *)
+
+val for_all : (UChar.t -> bool) -> t -> bool
+  (** [for_all p zChar] checks if all elements of [zChar]
+   satisfy the predicate [p]. *)
 
 (** Converting between [UnicodeString.Type] and [Zed_char.t] *)
 module US :
