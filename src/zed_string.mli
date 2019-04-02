@@ -19,7 +19,7 @@ type all_width = { len : int; width : int; }
 type width = (all_width, seg_width) result
   (** Type of the width of a Zed_string.t *)
 
-type t = { chars : Zed_char.t array; width : width; size : int; }
+type t
   (** Type of Zed_string.t *)
 
 val aval_width : width -> int
@@ -29,6 +29,7 @@ val init : int -> (int -> Zed_char.t) -> t
 val init_from_uChars : int -> (int -> UChar.t) -> t
 val make : int -> Zed_char.t -> t
 
+val chars : t -> Zed_char.t array
 val calc_size : t -> int
 val copy : t -> t
 val to_raw_list : t -> UChar.t list
