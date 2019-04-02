@@ -401,12 +401,7 @@ let replace ctx len rope =
     raise Cannot_edit
 
 let newline_rope = Zed_rope.singleton
-  { core= UChar.of_char '\n';
-    combined= [];
-    width= -1;
-    size= 1;
-  }
-
+  (Zed_char.unsafe_of_char '\n')
 
 let newline ctx =
   insert ctx newline_rope
@@ -739,7 +734,7 @@ type action =
 let get_action = function
   | Insert ch -> (fun ctx ->
       if Zed_char.length ch = 1
-      then insert_char ctx ch.core
+      then insert_char ctx (Zed_char.core ch)
       else insert ctx (Zed_rope.singleton ch))
   | Newline -> newline
   | Next_char -> next_char
@@ -902,9 +897,9 @@ let name_of_action x =
   in
   match x with
     | Insert ch ->
-        let code = UChar.code ch.core in
+        let code = UChar.code (Zed_char.core ch) in
         if code <= 255 then
-          let ch = Char.chr (UChar.code ch.core) in
+          let ch = Char.chr (UChar.code (Zed_char.core ch)) in
           match ch with
             | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
                 Printf.sprintf "insert(%c)" ch

@@ -331,20 +331,20 @@ let of_rope rope =
       append acc (String { length; width; width_info })
     else
       let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code ch.core = 10 then
+      if UChar.code (Zed_char.core ch) = 10 then
         let width, width_info= calc_widths widths in
         loop0 zip (append (append acc (String { length; width; width_info })) Return)
       else
-        loop zip (length + 1, ch.width::widths) acc
+        loop zip (length + 1, Zed_char.width ch::widths) acc
   and loop0 zip acc =
     if Zed_rope.Zip.at_eos zip then
       acc
     else
       let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code ch.core = 10 then
+      if UChar.code (Zed_char.core ch) = 10 then
         loop0 zip (append acc Return)
       else
-        loop zip (1, [ch.width]) acc
+        loop zip (1, [Zed_char.width ch]) acc
   in
   loop0 (Zed_rope.Zip.make_f rope 0) empty
 

@@ -962,10 +962,10 @@ end
 
 module Text_core = struct
   include Text
-  let get t i= (get t i).core
+  let get t i= Zed_char.core (get t i)
   let init = init_from_uChars
-  let look _ zip = (fst (Zip.next zip)).core
-  let iter f= iter (fun c-> f c.core)
+  let look _ zip = Zed_char.core (fst (Zip.next zip))
+  let iter f= iter (fun c-> f (Zed_char.core c))
 end
 
 module Text_raw = struct
@@ -977,7 +977,7 @@ module Text_raw = struct
   let length = length
 
   let look _ zip = fst (Zip_raw.next zip)
-  let iter f= iter (fun c-> f c.core)
+  let iter f= iter (fun c-> f (Zed_char.core c))
 
   let nth rope idx = Zip_raw.make_f rope idx
   let next _ zip = Zip_raw.move 1 zip

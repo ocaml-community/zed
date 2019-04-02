@@ -11,24 +11,19 @@ open CamomileLibrary
 open Result
 
 (** The type for glyphs. *)
-type t = {
-  core : UChar.t; (** the core character *)
-  combined : UChar.t list; (** combining marks *)
-  width : int;
-  size : int; (** the number of characters(UChar.t) *)
-}
-
-type pos = Core | Combined of int
-  (** A [pos]  describes a position in a [Zed_char.t] *)
-
-val to_raw : t -> UChar.t list
-  (** [to_raw t] returns a list of [UChar.t] which consists t *)
-
-val to_array : t -> UChar.t array
-  (** [to_array t] returns an array of [UChar.t] which consists t *)
+type t
 
 type char_prop = Printable of int | Other | Null
   (** The type of a character. It's [Printable of width] or [Other](unprintable character) or [Null](code 0). *)
+
+val to_raw : t -> UChar.t list
+val to_array : t -> UChar.t array
+
+val core : t -> UChar.t
+  (** [core char] returns the core of the [char] *)
+
+val combined : t -> UChar.t list
+  (** [combined char] returns the combining marks of the [char] *)
 
 val zero : t
   (** The Character 0. *)
@@ -47,9 +42,6 @@ val length : t -> int
 
 val width : t -> int
   (** [width ch] returns the width of [ch]. *)
-
-val calc_size : t -> int
-  (** [calc_size ch] calculates and returns the width of [ch]. *)
 
 val out_of_range : t -> int -> bool
   (** [out_of_range ch idx] returns whether [idx] is out of range of [ch]. *)
@@ -90,6 +82,9 @@ val unsafe_of_uChar : UChar.t -> t
 val for_all : (UChar.t -> bool) -> t -> bool
   (** [for_all p zChar] checks if all elements of [zChar]
    satisfy the predicate [p]. *)
+
+val iter : (UChar.t -> unit) -> t -> unit
+  (** [iter f char] applies [f] on all characters of [char]. *)
 
 (** Converting between [UnicodeString.Type] and [Zed_char.t] *)
 module US :

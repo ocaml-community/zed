@@ -47,7 +47,7 @@ module Zed_string0 = struct
     | Ok {len=_;width}-> width
     | Error {start=_;len=_;width}-> width
 
-  let calc_size'= Array.fold_left (fun acc c-> c.Zed_char.size + acc) 0
+  let calc_size'= Array.fold_left (fun acc c-> Zed_char.size c + acc) 0
   let calc_size t= calc_size' t.chars
 
   let copy t= {t with chars= Array.copy t.chars }
@@ -78,10 +78,10 @@ module Zed_string0 = struct
   let get_raw t i=
     let rec get pos offset=
       let zChar= t.chars.(pos) in
-      if i < offset + zChar.size then
+      if i < offset + Zed_char.size zChar then
         Zed_char.get zChar (i - offset)
       else
-        get (pos+1) (offset + zChar.size)
+        get (pos+1) (offset + Zed_char.size zChar)
     in
     get 0 0
 
@@ -92,8 +92,8 @@ module Zed_string0 = struct
     let length= Array.length chars in
     let rec calc w i=
       if i < length then
-        if chars.(i).width > 0 then
-          calc (w + chars.(i).width) (i+1)
+        if Zed_char.width chars.(i) > 0 then
+          calc (w + Zed_char.width chars.(i)) (i+1)
         else
           Error { start; len= i - start; width= w }
       else Ok {len= length; width= w }
@@ -102,8 +102,8 @@ module Zed_string0 = struct
       let num= min num length in
       let rec calc n w i=
         if i < length && n > 0 then
-          if chars.(i).width > 0 then
-            calc (n-1) (w + chars.(i).width) (i+1)
+          if Zed_char.width chars.(i) > 0 then
+            calc (n-1) (w + Zed_char.width chars.(i)) (i+1)
           else
             Error { start; len= i - start; width= w }
         else Ok {len= num; width= w }
@@ -142,6 +142,8 @@ module Zed_string0 = struct
       {  chars; width; size }
     | _-> raise (Invalid_argument "Zed_string0.init_from_uChars")
 
+
+  let chars t= t.chars
 
   let length t= Array.length t.chars
 
@@ -186,7 +188,7 @@ module Zed_string0 = struct
 
   let check_range t n= n >= 0 && n <= length t
 
-  let look t i= t.chars.(i).core
+  let look t i= Zed_char.core t.chars.(i)
 
   let nth t n= if check_range t n
     then n
@@ -421,10 +423,10 @@ end
 module US_Core = struct
   include Zed_string0
 
-  let get t i= t.chars.(i).core
+  let get t i= Zed_char.core t.chars.(i)
   let init= init_from_uChars
   let iter f t= Array.iter
-    (fun zChar-> f zChar.Zed_char.core)
+    (fun zChar-> f (Zed_char.core zChar))
     t.chars
   let compare t1 t2= Zed_utils.array_compare
     ~compare:Zed_char.compare_core
@@ -432,30 +434,30 @@ module US_Core = struct
 
   let to_list t= t.chars
     |> Array.to_list
-    |> List.map (fun c-> c.Zed_char.core)
+    |> List.map Zed_char.core
 
   let to_array t= t.chars
-    |> Array.map (fun c-> c.Zed_char.core)
+    |> Array.map Zed_char.core
 
   let charsL_to_list t= t
-    |> List.map (fun c-> c.Zed_char.core)
+    |> List.map Zed_char.core
 
   let charsL_to_array t= t
-    |> List.map (fun c-> c.Zed_char.core)
+    |> List.map Zed_char.core
     |> Array.of_list
 
   let chars_to_list t= t
     |> Array.to_list
-    |> List.map (fun c-> c.Zed_char.core)
+    |> List.map Zed_char.core
 
   let chars_to_array t= t
-    |> Array.map (fun c-> c.Zed_char.core)
+    |> Array.map Zed_char.core
 
 
   module US(US:UnicodeString.Type) = struct
     module Convert = Zed_utils.Convert(US)
     let of_t t= t.chars
-      |> Array.map (fun c-> c.Zed_char.core)
+      |> Array.map Zed_char.core
       |> Convert.of_array
   end
   module Buf = struct
@@ -497,7 +499,7 @@ module US_Raw = struct
 
   let nth t o=
     let rec nth i n=
-      let size= t.Zed_string0.chars.(i).size in
+      let size= Zed_char.size t.Zed_string0.chars.(i) in
       if n < size then
         (i, o)
       else
@@ -506,7 +508,7 @@ module US_Raw = struct
     nth 0 o
 
   let next t (i, o)=
-    let size= t.Zed_string0.chars.(i).size in
+    let size= Zed_char.size t.Zed_string0.chars.(i) in
     if o+1 < size then
       (i, o+1)
     else
@@ -517,7 +519,7 @@ module US_Raw = struct
       (i, o-1)
     else
       let i= i - 1 in
-      let size= t.Zed_string0.chars.(i).size in
+      let size= Zed_char.size t.Zed_string0.chars.(i) in
       (i, size - 1)
 
   let first _= (0, 0)
@@ -525,18 +527,18 @@ module US_Raw = struct
     let i= Array.length t.Zed_string0.chars - 1 in
     let o=
       if i >= 0
-      then t.chars.(i).size - 1
+      then Zed_char.size t.chars.(i) - 1
       else 0
     in
     (i, o)
 
   let move t (i, o) n=
     let rec move (i, o) n=
-      let size= t.Zed_string0.chars.(i).size in
+      let size= Zed_char.size t.Zed_string0.chars.(i) in
       if o + n >= size then
         move (i+1, 0) (n - (size-o))
       else if o + n < 0 then
-        let size= t.Zed_string0.chars.(i-1).size in
+        let size= Zed_char.size t.Zed_string0.chars.(i-1) in
         move (i-1, size-1) (o + n)
       else
         (i, o+n)
@@ -550,9 +552,7 @@ module US_Raw = struct
     else compare o1 o2
 
   let iter f t= Array.iter
-    (fun (zChar:Zed_char.t)->
-      f zChar.core;
-      List.iter f zChar.combined)
+    (Zed_char.iter f)
     t.Zed_string0.chars
 
 

@@ -11,32 +11,25 @@
 open CamomileLibraryDefault.Camomile
 open Result
 
-type t= {
-  core: UChar.t;
-  combined: UChar.t list;
-  width: int;
-  size: int;
-}
+type t= Zed_utf8.t
 
-type pos=
-  | Core
-  | Combined of int
-
+(*
 let to_raw t= t.core :: t.combined
 let to_array t= Array.of_list (t.core :: t.combined)
+*)
 
 type char_prop=
   | Printable of int
   | Other
   | Null
 
-let zero=
-  {
-    core= UChar.of_int 0;
-    combined= [];
-    width= 0;
-    size= 1;
-  }
+let to_raw= Zed_utf8.explode
+let to_array t= Array.of_list (Zed_utf8.explode t)
+
+let zero= String.make 1 (Char.chr 0)
+
+let core t= Zed_utf8.unsafe_extract t 0
+let combined t= List.tl (Zed_utf8.explode t)
 
 let prop_uChar uChar=
   match CharInfo_width.width uChar with
@@ -47,56 +40,40 @@ let prop_uChar uChar=
     else Printable 0
   | w-> Printable w
 
-let prop t= prop_uChar t.core
+let prop t= prop_uChar (Zed_utf8.unsafe_extract t 0)
 
-let length t= 1 + List.length t.combined
-let width t= t.width
-let size t= t.size
+let length= Zed_utf8.length
+let size= length
 
-let calc_size' l= List.length l + 1
-let calc_size t= calc_size' t.combined
-let out_of_range t i= i < 0 || i >= t.size
-let get t i=
-  if i = 0
-  then t.core
-  else List.nth t.combined (i-1)
+let width t= CharInfo_width.width (Zed_utf8.unsafe_extract t 0)
+
+let out_of_range t i= i < 0 || i >= size t
+let get= Zed_utf8.get
+
 let get_opt t i=
-  if i = 0
-  then Some t.core
-  else
-    try Some (List.nth t.combined (i-1))
-    with _-> None
+  try Some (get t i)
+  with _-> None
 
 let append ch mark=
   match prop_uChar mark with
-  | Printable 0->
-    let combined= List.append ch.combined [mark]
-    and size= ch.size + 1 in
-    { ch with combined; size }
+  | Printable 0-> ch ^ (Zed_utf8.singleton mark)
   | _-> failwith "combing mark expected"
 
-let compare_core t1 t2= UChar.compare t1.core t2.core
+let compare_core t1 t2=
+  let core1= Zed_utf8.unsafe_extract t1 0
+  and core2= Zed_utf8.unsafe_extract t2 0 in
+  UChar.compare core1 core2
 
-let compare_raw t1 t2= Zed_utils.list_compare
-  ~compare:UChar.compare
-  (to_raw t1) (to_raw t2)
+let compare_raw= Zed_utf8.compare
 
 let compare= compare_raw
 
 let mix_uChar zChar uChar=
   match prop_uChar uChar with
   | Printable 0->
-    let combined= List.append zChar.combined [uChar] in
-    Ok { zChar with combined; size= zChar.size + 1 }
-  | Other->
-    let new_char= { core= uChar; combined= []; width= -1; size= 1 } in
-    Error new_char
-  | Null->
-    let new_char= { core= uChar; combined= []; width= 0; size= 1 } in
-    Error new_char
-  | Printable w->
-    let new_char= { core= uChar; combined= []; width= w; size= 1 } in
-    Error new_char
+    Ok (zChar ^ (Zed_utf8.singleton uChar))
+  | _->
+    Error (Zed_utf8.singleton uChar)
 
 let rec first_core uChars=
   match uChars with
@@ -128,13 +105,13 @@ let rec subsequent uChars=
 let of_uChars uChars=
   match first_core uChars with
   | None, tl-> None, tl
-  | Some (Printable w, uChar), tl->
+  | Some (Printable _w, uChar), tl->
     let combined, tl= subsequent tl in
-    Some { core= uChar; combined; width= w; size= calc_size' combined }, tl
+    Some (Zed_utf8.implode (uChar::combined)), tl
   | Some (Null, uChar), tl->
-    Some { core= uChar; combined= []; width= 0; size= 1 }, tl
+    Some (Zed_utf8.singleton uChar) ,tl
   | Some (Other, uChar), tl->
-    Some { core= uChar; combined= []; width= -1; size= 1 }, tl
+    Some (Zed_utf8.singleton uChar) ,tl
 
 let rec zChars_of_uChars uChars=
   match of_uChars uChars with
@@ -143,25 +120,16 @@ let rec zChars_of_uChars uChars=
     zChar :: zChars, tl
 
 let unsafe_of_char c=
-  let core= UChar.of_char c in
-  { core;
-    combined= [];
-    width= CharInfo_width.width core;
-    size= 1;
-  }
+  Zed_utf8.singleton (UChar.of_char c)
 
-let unsafe_of_uChar uChar=
-  { core= uChar;
-    combined= [];
-    width= CharInfo_width.width uChar;
-    size= 1;
-  }
+let unsafe_of_uChar uChar= Zed_utf8.singleton uChar
 
-let for_all p ch= p ch.core && List.for_all p ch.combined
+let for_all= Zed_utf8.for_all
+let iter= Zed_utf8.iter
 
 module US(US:UnicodeString.Type) = struct
   module Convert = Zed_utils.Convert(US)
-  let of_t t= t.core :: t.combined |> Convert.of_list
+  let of_t t= Zed_utf8.explode t |> Convert.of_list
   let to_t us=
     let len= US.length us in
     let rec create i=
