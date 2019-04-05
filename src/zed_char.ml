@@ -31,6 +31,10 @@ let zero= String.make 1 (Char.chr 0)
 let core t= Zed_utf8.unsafe_extract t 0
 let combined t= List.tl (Zed_utf8.explode t)
 
+external id : 'a -> 'a = "%identity"
+let of_utf8 : string -> t= id
+let to_utf8 : t -> string= id
+
 let prop_uChar uChar=
   match CharInfo_width.width uChar with
   | -1 -> Other
