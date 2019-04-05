@@ -10,6 +10,10 @@
 open CamomileLibrary
 open Result
 
+exception Out_of_bounds
+  (** Exception raised when trying to access a character which is
+      outside the bounds of a string. *)
+
 type seg_width = { start : int; len : int; width : int; }
   (** Type of the width of a segment of a Zed_string.t *)
 
@@ -22,6 +26,12 @@ type width = (all_width, seg_width) result
 type t
   (** Type of Zed_string.t *)
 
+val of_utf8 : string -> t
+val to_utf8 : t -> string
+
+val explode : t -> Zed_char.t list
+val implode : Zed_char.t list -> t
+
 val aval_width : width -> int
   (** Returns the widest available width *)
 
@@ -29,8 +39,6 @@ val init : int -> (int -> Zed_char.t) -> t
 val init_from_uChars : int -> (int -> UChar.t) -> t
 val make : int -> Zed_char.t -> t
 
-val chars : t -> Zed_char.t array
-val calc_size : t -> int
 val copy : t -> t
 val to_raw_list : t -> UChar.t list
 val to_raw_array : t -> UChar.t array
@@ -38,20 +46,20 @@ type index = int
 val get : t -> int -> Zed_char.t
 val get_raw : t -> int -> UChar.t
 val empty : unit -> t
-val calc_width : ?start:int -> ?num:int -> Zed_char.t array -> width
-val width : ?start:int -> t -> width
+val width : ?start:int -> ?num:int -> t -> width
 
 val size : t -> int
-  (** [size ch] returns the size (number of characters) of [ch]. *)
+  (** [size str] returns the number of UChar.t in [str]. *)
 
 val length : t -> int
-  (** Aliase of size *)
+  (** [length str returns the number of Zed_char.t in [str] *)
 
-val calc_width_unsafe : Zed_char.t array -> int
+val extract : t -> index -> Zed_char.t
+val extract_next : t -> index -> (Zed_char.t * index)
+val extract_prev : t -> index -> (Zed_char.t * index)
+
 val of_uChars :
   UChar.t list -> t * UChar.t list
-val of_char_list : Zed_char.t list -> t
-val of_char_array : Zed_char.t array -> t
 val for_all : (Zed_char.t -> bool) -> t -> bool
   (** [for_all p zStr] checks if all Zed_char.t in [zStr]
    satisfy the predicate [p]. *)
@@ -98,23 +106,16 @@ module US :
 
 module Buf :
   sig
-    type buf = {
-      mutable buffer : Zed_char.t array;
-      mutable position : int;
-      mutable length : int;
-      initial_buffer : Zed_char.t array;
-    }
-    val resize : buf -> int -> unit
+    type buf
     val create : int -> buf
     val contents : buf -> t
-    val contents_len : buf -> int
     val clear : buf -> unit
     val reset : buf -> unit
+    val length : buf -> int
     val add_zChar : buf -> Zed_char.t -> unit
     val add_uChar : buf -> UChar.t -> unit
     val add_string : buf -> t -> unit
     val add_buffer : buf -> buf -> unit
-    type t = buf
   end
 
 module US_Core : sig
@@ -140,12 +141,6 @@ module US_Core : sig
 
   val to_list : t -> UChar.t list
   val to_array : t -> UChar.t array
-  val charsL_to_list : Zed_char.t list -> UChar.t list
-  val charsL_to_array :
-    Zed_char.t list -> UChar.t array
-  val chars_to_list : Zed_char.t array -> UChar.t list
-  val chars_to_array :
-    Zed_char.t array -> UChar.t array
 
   module US :
     functor (US : UnicodeString.Type) ->
@@ -162,10 +157,8 @@ module US_Core : sig
   module Buf :
     sig
       type buf = Buf.buf
-      val resize : buf -> int -> unit
       val create : int -> buf
       val contents : buf -> t
-      val contents_len : buf -> int
       val clear : buf -> unit
       val reset : buf -> unit
       val add_zChar : buf -> Zed_char.t -> unit
@@ -173,17 +166,15 @@ module US_Core : sig
       val add_string : buf -> t -> unit
       val add_buffer : buf -> buf -> unit
       val add_char : buf -> UChar.t -> unit
-      type t = buf
     end
 end
 
 module US_Raw : sig
   type t
-  val memory_get : unit -> t -> int -> UChar.t
   val get : t -> int -> UChar.t
   val init : int -> (int -> UChar.t) -> t
   val length : t -> int
-  type index = int * int
+  type index
   val check_range : t -> int -> bool
 
   val look : t -> index -> UChar.t
@@ -203,10 +194,8 @@ module US_Raw : sig
   module Buf :
     sig
       type buf = Buf.buf
-      val resize : buf -> int -> unit
       val create : int -> buf
       val contents : buf -> t
-      val contents_len : buf -> int
       val clear : buf -> unit
       val reset : buf -> unit
       val add_zChar : buf -> Zed_char.t -> unit
@@ -214,7 +203,6 @@ module US_Raw : sig
       val add_string : buf -> t -> unit
       val add_buffer : buf -> buf -> unit
       val add_char : buf -> UChar.t -> unit
-      type t = buf
     end
 end
 

@@ -25,6 +25,9 @@ val core : t -> UChar.t
 val combined : t -> UChar.t list
   (** [combined char] returns the combining marks of the [char] *)
 
+val of_utf8 : string -> t
+val to_utf8 : t -> string
+
 val zero : t
   (** The Character 0. *)
 

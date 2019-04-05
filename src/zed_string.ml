@@ -11,18 +11,14 @@
 open CamomileLibraryDefault.Camomile
 open Result
 
+exception Invalid of string * string
+exception Out_of_bounds
+  (** Exception raised when trying to access a character which is
+      outside the bounds of a string. *)
+
+let fail str pos msg = raise (Invalid(Printf.sprintf "at position %d: %s" pos msg, str))
+
 module Zed_string0 = struct
-  module UCharArray = struct
-    module UCharArray0 = struct
-      type t= UChar.t array
-      let length: t-> int= Array.length
-      let get: t -> int -> UChar.t= Array.get
-    end
-    module Width0 = CharInfo_width.String(UCharArray0)
-
-    include UCharArray0
-  end
-
 
   type seg_width= {
     start: int;
@@ -37,84 +33,139 @@ module Zed_string0 = struct
 
   type width= (all_width, seg_width) result
 
-  type t= {
-    chars: Zed_char.t array;
-    width: width;
-    size: int;
-  }
+  type t= Zed_utf8.t
+
+  external id : 'a -> 'a = "%identity"
+  let of_utf8 : string -> t= id
+  let to_utf8 : t -> string= id
 
   let aval_width= function
     | Ok {len=_;width}-> width
     | Error {start=_;len=_;width}-> width
 
-  let calc_size'= Array.fold_left (fun acc c-> Zed_char.size c + acc) 0
-  let calc_size t= calc_size' t.chars
+  let size str= List.length (Zed_utf8.explode str)
 
-  let copy t= {t with chars= Array.copy t.chars }
+  let length str=
+    List.length (fst (Zed_char.zChars_of_uChars (Zed_utf8.explode str)))
 
-  let to_raw_list t= t.chars
-    |> Array.to_list
-    |> List.map Zed_char.to_raw
-    |> List.concat
+  let copy t= t
 
-  let to_raw_array t= t.chars
-    |> Array.to_list
-    |> List.map Zed_char.to_array
-    |> Array.concat
+  let unsafe_next str ofs=
+    let str_len= String.length str in
+    let rec aux str ofs=
+      let chr, next= Zed_utf8.extract_next str ofs in
+      if next >= str_len then
+        next
+      else
+        match Zed_char.prop_uChar chr with
+        | Printable w->
+          if w > 0 then next
+          else aux str next
+        | Other-> next
+        | Null-> next
+    in
+    aux str ofs
 
-  let chars_to_raw_list t= t
-    |> Array.to_list
-    |> List.map Zed_char.to_raw
-    |> List.concat
+  let next str ofs =
+    if ofs < 0 || ofs >= String.length str then
+      raise Out_of_bounds
+    else
+      unsafe_next str ofs
 
-  let chars_to_raw_array t= t
-    |> Array.to_list
-    |> List.map Zed_char.to_array
-    |> Array.concat
+  let rec unsafe_prev str ofs=
+    if ofs <= 0 then
+      fail str ofs "invalid start of Zed_char sequence"
+    else
+      let chr, prev= Zed_utf8.extract_prev str ofs in
+      match Zed_char.prop_uChar chr with
+      | Printable 0-> unsafe_prev str prev
+      | _-> prev
+
+  let prev str ofs=
+    if ofs <= 0 || ofs > String.length str then
+      raise Out_of_bounds
+    else
+      unsafe_prev str ofs
+
+  let rec move_l str ofs len=
+    if len = 0 then
+      ofs
+    else if ofs >= String.length str then
+      raise Out_of_bounds
+    else
+      move_l str (unsafe_next str ofs) (len - 1)
+
+  let extract str ofs=
+    let next= next str ofs in
+    Zed_char.of_utf8 (String.sub str ofs (next - ofs))
+
+  let extract_next str ofs=
+    let next= next str ofs in
+    (Zed_char.of_utf8 (String.sub str ofs (next - ofs)), next)
+
+  let extract_prev str ofs=
+    let prev= prev str ofs in
+    (Zed_char.of_utf8 (String.sub str prev (ofs - prev)), prev)
+
+  let to_raw_list str= Zed_utf8.explode str
+
+  let to_raw_array str= Array.of_list (to_raw_list str)
 
   type index= int
 
-  let get t i= t.chars.(i)
-  let get_raw t i=
-    let rec get pos offset=
-      let zChar= t.chars.(pos) in
-      if i < offset + Zed_char.size zChar then
-        Zed_char.get zChar (i - offset)
-      else
-        get (pos+1) (offset + Zed_char.size zChar)
-    in
-    get 0 0
+  let get str idx =
+    if idx < 0 then
+      raise Out_of_bounds
+    else
+      extract str (move_l str 0 idx)
 
+  let get_raw= Zed_utf8.get
 
-  let empty ()= { chars= [||]; width= Ok {len= 0; width= 0}; size= 0 }
+  let empty ()= ""
 
-  let calc_width ?(start=0) ?num (chars: Zed_char.t array)=
-    let length= Array.length chars in
-    let rec calc w i=
-      if i < length then
-        if Zed_char.width chars.(i) > 0 then
-          calc (w + Zed_char.width chars.(i)) (i+1)
+  let width ?(start=0) ?num str=
+    let str_len= String.length str in
+    let rec calc w idx ofs=
+      if ofs < str_len then
+        let chr, next= extract_next str ofs in
+        let chr_width= Zed_char.width chr in
+        if chr_width > 0 then
+          calc (w + chr_width) (idx+1) next
         else
-          Error { start; len= i - start; width= w }
-      else
-        let len= length - start in
-        Ok {len; width= w }
+          Error { start; len= idx - start; width= w }
+      else Ok {len= idx - start; width= w }
     in
-    let calc_num num w i=
-      let num= min num (length - start) in
-      let rec calc n w i=
-        if i < length && n > 0 then
-          if Zed_char.width chars.(i) > 0 then
-            calc (n-1) (w + Zed_char.width chars.(i)) (i+1)
+    let calc_num num w idx ofs=
+      let rec calc n w idx ofs=
+        if ofs < str_len && n > 0 then
+          let chr, next= extract_next str ofs in
+          let chr_width= Zed_char.width chr in
+          if chr_width > 0 then
+            calc (n-1) (w + chr_width) (idx+1) next
           else
-            Error { start; len= i - start; width= w }
-        else Ok {len= num; width= w }
+            Error { start; len= idx - start; width= w }
+        else Ok {len= idx - start; width= w }
       in
-      calc num w i
+      calc num w idx ofs
     in
+    let ofs= move_l str 0 start in
     match num with
-    | Some num-> calc_num num 0 start
-    | None-> calc 0 start
+    | Some num-> calc_num num 0 start ofs
+    | None-> calc 0 start ofs
+
+  let explode str=
+    let str_len= String.length str in
+    let rec aux str ofs=
+      if ofs < str_len then
+        let chr, next= extract_next str ofs in
+        chr :: aux str next
+      else
+        []
+    in
+    aux str 0
+
+  let implode chars=
+    String.concat "" (List.map Zed_char.to_utf8 chars)
 
   let init len (f: int -> Zed_char.t)=
     let rec create n=
@@ -122,10 +173,7 @@ module Zed_string0 = struct
         f (len - n) :: create (n-1)
       else []
     in
-    let chars= create len |> Array.of_list in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
+    implode (create len)
 
   let init_from_uChars len f=
     match len with
@@ -138,59 +186,19 @@ module Zed_string0 = struct
       in
       let uChars= create len in
       let zChars, _= Zed_char.zChars_of_uChars uChars in
-      let chars= Array.of_list zChars in
-      let width= calc_width chars
-      and size= calc_size' chars in
-      {  chars; width; size }
+      implode zChars
     | _-> raise (Invalid_argument "Zed_string0.init_from_uChars")
 
 
-  let chars t= t.chars
-
-  let length t= Array.length t.chars
-
-  let width ?start t=
-    match start with
-    | None-> t.width
-    | _-> calc_width ?start t.chars
-
-  let size t= t.size
-
-    let add_width w1 w2=
-      match w1, w2 with
-      | Ok { len= l1; width= w1 }, Ok { len= l2; width= w2 }->
-        Ok { len= l1 + l2; width= w1 + w2 }
-      | Ok { len= l1; width= w1 }, Error { start; len= l2; width= w2}->
-        Error { start= l1 + start; len= l1 + l2; width= w1 + w2 }
-      | Error _ as w, _-> w
-
-  let calc_width_unsafe chars= Array.fold_left
-    (+) 0 (Array.map Zed_char.width chars)
-
   let of_uChars uChars=
     let zChars, uChars= Zed_char.zChars_of_uChars uChars in
-    let chars= Array.of_list zChars in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }, uChars
+    implode zChars, uChars
 
-  let of_char_list cl=
-    let chars= Array.of_list cl in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
-
-  let of_char_array ca=
-    let chars= ca in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
-
-  let for_all p str= Array.for_all p str.chars
+  let for_all p str= List.for_all p (explode str)
 
   let check_range t n= n >= 0 && n <= length t
 
-  let look t i= Zed_char.core t.chars.(i)
+  let look str ofs= Zed_utf8.extract str ofs
 
   let nth t n= if check_range t n
     then n
@@ -210,47 +218,35 @@ module Zed_string0 = struct
 
   let out_of_range t n= n < 0 || n >= length t
 
-  let iter f t= Array.iter f t.chars
+  let iter f str= List.iter f (explode str)
 
-  let rev_iter f t=
-    for i= Array.length t.chars - 1 downto 0 do
-      f t.chars.(i)
-    done
+  let rev_iter f str= List.iter f (List.rev (explode str))
 
-  let fold f t acc=
-    let len= Array.length t.chars in
-    let rec fold acc i=
-      if i < len then
-        fold (f t.chars.(i) acc) (i+1)
-      else
-        acc
+  let fold f str acc=
+    let rec aux f chars acc=
+      match chars with
+      | []-> acc
+      | chr::tl-> aux f tl (f chr acc)
     in
-    fold acc 0
+    aux f (explode str) acc
 
-  let rev_fold f t acc=
-    let rec fold acc i=
-      if i >= 0 then
-        fold (f t.chars.(i) acc) (i-1)
-      else
-        acc
+  let rev_fold f str acc=
+    let rec aux f chars acc=
+      match chars with
+      | []-> acc
+      | chr::tl-> aux f tl (f chr acc)
     in
-    fold acc (Array.length t.chars - 1)
+    aux f (List.rev (explode str)) acc
 
-  let map f t=
-    let chars= Array.map f t.chars in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
+  let map f str=
+    implode (List.map f (explode str))
 
-  let rev_map f t=
-    let chars= Array.map f (Zed_utils.array_rev t.chars) in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
+  let rev_map f str=
+    implode (List.map f (List.rev (explode str)))
 
-  let compare t1 t2= Zed_utils.array_compare
+  let compare str1 str2= Zed_utils.list_compare
     ~compare:Zed_char.compare_raw
-    t1.chars t2.chars
+    (explode str1) (explode str2)
 
   let first (_:t)= 0
   let last t= max (length t - 1) 0
@@ -268,10 +264,8 @@ module Zed_string0 = struct
     if ofs < 0 || len < 0 || ofs > length s - len then
       invalid_arg "Zed_string.sub"
     else
-      let chars= Array.sub s.chars ofs len in
-      let width= calc_width chars
-      and size= calc_size' chars in
-      { chars; width; size }
+      let ofs_end= move_l s ofs len in
+      String.sub s ofs (ofs_end - ofs)
 
   let after s i=
     let len= length s in
@@ -294,28 +288,17 @@ module Zed_string0 = struct
       unsafe_sub_equal str 0 prefix 0
 
   let make len c=
-    let chars= Array.make len c in
-    let width= calc_width chars
-    and size= calc_size' chars in
-    { chars; width; size }
+    implode (Array.to_list (Array.make len c))
 
   let append s1 s2=
-    let chars= Array.append s1.chars s2.chars
-    and width= add_width s1.width s2.width
-    and size= s1.size + s2.size in
-    { chars; width; size }
+    s1 ^ s2
 
   let ends_with str ends=
-    let len_s= length str
-    and len_e= length ends in
-    if len_s >= len_e then
-      let start= len_s - len_e in
-      compare (sub str start len_e) ends = 0
-    else false
+    Zed_utf8.ends_with str ends
 
   module US0(US:UnicodeString.Type) = struct
     module Convert = Zed_utils.Convert(US)
-    let of_t t= t.chars |> chars_to_raw_list |> Convert.of_list
+    let of_t t= Zed_utf8.explode t|> Convert.of_list
     let to_t us=
       let len= US.length us in
       let rec create i=
@@ -329,138 +312,50 @@ module Zed_string0 = struct
   end
 
   module Buf0 = struct
-    type buf= {
-      mutable buffer: Zed_char.t array;
-      mutable position: int;
-      mutable length: int;
-      initial_buffer: Zed_char.t array;
-    }
-    type t= buf
+    type buf= Buffer.t
 
-    let resize buf more =
-      let len = buf.length in
-      let new_len = ref len in
-      if more <> 0 then begin
-        if more > 0 then
-          while buf.position + more > !new_len do
-            new_len := 2 * !new_len
-          done
-        else
-          while buf.position + more < !new_len / 2 && !new_len >= 2 do
-            new_len := !new_len / 2
-          done;
-        if !new_len > Sys.max_array_length then begin
-          if buf.position + more <= Sys.max_array_length
-          then new_len := Sys.max_array_length
-          else failwith "Buf.resize: cannot grow buffer"
-        end;
-        let new_buffer = Array.make !new_len Zed_char.zero in
-        Array.blit buf.buffer 0 new_buffer 0 buf.position;
-        buf.buffer <- new_buffer;
-        buf.length <- !new_len
-      end
+    let create n= Buffer.create n
 
-    let create n=
-      let n= if n < 1 then 1 else n in
-      let n=
-        if n > Sys.max_array_length
-        then Sys.max_array_length
-        else n in
-      let buffer= Array.make n Zed_char.zero in
-      let initial_buffer= buffer in
-      { buffer; position= 0; length= n; initial_buffer }
+    let contents b= Buffer.contents b
 
-    let contents b=
-      let chars= Array.sub b.buffer 0 b.position in
-      let width= calc_width chars
-      and size= calc_size' chars in
-      { chars; width; size }
+    let clear b= Buffer.clear b
 
-    let contents_len b= b.position
+    let reset b= Buffer.reset b
 
-    let clear b= b.position <- 0
-
-    let reset b=
-      b.position <- 0;
-      b.buffer <- b.initial_buffer;
-      b.length <- Array.length b.buffer
+    let length b= length (contents b)
 
     let add_zChar b zChar=
-      if b.position >= b.length then resize b 1;
-      b.buffer.(b.position) <- zChar;
-      b.position <- b.position + 1
+      Buffer.add_string b (Zed_char.to_utf8 zChar)
 
     let add_uChar b uChar=
-      if b.position > 0 then
-        let zChar= b.buffer.(b.position-1) in
-        match Zed_char.mix_uChar zChar uChar with
-        | Ok zChar-> b.buffer.(b.position-1) <- zChar
-        | Error new_char->
-          if b.position >= b.length then resize b 1;
-          b.buffer.(b.position) <- new_char;
-          b.position <- b.position + 1
-      else
-        match Zed_char.of_uChars [uChar] with
-        | Some new_char, _->
-          if b.position >= b.length then resize b 1;
-          b.buffer.(b.position) <- new_char;
-          b.position <- b.position + 1
-        | None, _-> ()
+      Buffer.add_string b (Zed_utf8.singleton uChar)
 
-    let add_string b s=
-      let length= Array.length s.chars in
-      let new_pos= b.position + length in
-      if new_pos > b.length then resize b length;
-      Array.blit s.chars 0 b.buffer b.position length;
-      b.position <- b.position + length
+    let add_string b s= Buffer.add_string b s
 
-    let add_buffer b1 b2=
-      let more= b1.position + b2.position - b1.length in
-      if more > 0 then resize b1 more;
-      Array.blit b2.buffer 0 b1.buffer b1.position b2.position;
-      b1.position <- b1.position + b2.position
+    let add_buffer b1 b2= Buffer.add_buffer b1 b2
   end
 end
 
 module US_Core = struct
   include Zed_string0
 
-  let get t i= Zed_char.core t.chars.(i)
+  let get str i= Zed_char.core (get str i)
   let init= init_from_uChars
-  let iter f t= Array.iter
-    (fun zChar-> f (Zed_char.core zChar))
-    t.chars
-  let compare t1 t2= Zed_utils.array_compare
+  let iter f str= iter (fun zChar-> f (Zed_char.core zChar)) str
+  let compare str1 str2= Zed_utils.list_compare
     ~compare:Zed_char.compare_core
-    t1.chars t2.chars
+    (explode str1) (explode str2)
 
-  let to_list t= t.chars
-    |> Array.to_list
+  let to_list str= explode str
     |> List.map Zed_char.core
 
-  let to_array t= t.chars
-    |> Array.map Zed_char.core
-
-  let charsL_to_list t= t
-    |> List.map Zed_char.core
-
-  let charsL_to_array t= t
-    |> List.map Zed_char.core
-    |> Array.of_list
-
-  let chars_to_list t= t
-    |> Array.to_list
-    |> List.map Zed_char.core
-
-  let chars_to_array t= t
-    |> Array.map Zed_char.core
-
+  let to_array str= to_list str |> Array.of_list
 
   module US(US:UnicodeString.Type) = struct
     module Convert = Zed_utils.Convert(US)
-    let of_t t= t.chars
-      |> Array.map Zed_char.core
-      |> Convert.of_array
+    let of_t t= (explode t)
+      |> List.map Zed_char.core
+      |> Convert.of_list
   end
   module Buf = struct
     include Buf0
@@ -470,99 +365,45 @@ end
 
 module US_Raw = struct
   type t= Zed_string0.t
-  let memory_get ()=
-    let open Zed_string0 in
-    let last= ref (empty ())
-    and cache= ref [||] in
-    let get t i=
-      if t != !last then
-        begin
-          last:= t;
-          cache:= chars_to_raw_array t.chars
-        end;
-      !cache.(i)
-    in
-    get
 
-  let get= Zed_string0.get_raw (* memory_get () *)
+  let get= Zed_string0.get_raw
   let init= Zed_string0.init_from_uChars
-  let length t= Array.fold_left (+) 0 (Array.map Zed_char.length t.Zed_string0.chars)
+  let length= Zed_utf8.length
 
-  type index= int * int
+  type index= int
 
-  let check_range t n= n >= 0 && n < t.Zed_string0.size
-  let out_of_range t (i,o)=
-    if i < 0 || i >= Array.length t.Zed_string0.chars then
-      true
+  let check_range t n= n >= 0 && n < Zed_string0.size t
+  let out_of_range str ofs=
+    ofs < 0 || ofs >= String.length str
+
+  let look str ofs= Zed_utf8.extract str ofs
+
+  let nth str idx= Zed_string0.move_l str 0 idx
+
+  let next= Zed_utf8.next
+
+  let prev= Zed_utf8.prev
+
+  let first _= 0
+  let last str= Zed_utf8.prev str (String.length str)
+
+  let rec move str ofs len=
+    if len = 0 then
+      ofs
+    else if ofs = String.length str then
+      raise Out_of_bounds
     else
-      Zed_char.out_of_range t.chars.(i) o
-
-  let look t (i,o)= Zed_char.get t.Zed_string0.chars.(i) o
-
-  let nth t o=
-    let rec nth i n=
-      let size= Zed_char.size t.Zed_string0.chars.(i) in
-      if n < size then
-        (i, o)
-      else
-        nth (i + 1) (o - size)
-    in
-    nth 0 o
-
-  let next t (i, o)=
-    let size= Zed_char.size t.Zed_string0.chars.(i) in
-    if o+1 < size then
-      (i, o+1)
-    else
-      (i+1, 0)
-
-  let prev t (i, o)=
-    if o-1 > 0 then
-      (i, o-1)
-    else
-      let i= i - 1 in
-      let size= Zed_char.size t.Zed_string0.chars.(i) in
-      (i, size - 1)
-
-  let first _= (0, 0)
-  let last t=
-    let i= Array.length t.Zed_string0.chars - 1 in
-    let o=
-      if i >= 0
-      then Zed_char.size t.chars.(i) - 1
-      else 0
-    in
-    (i, o)
-
-  let move t (i, o) n=
-    let rec move (i, o) n=
-      let size= Zed_char.size t.Zed_string0.chars.(i) in
-      if o + n >= size then
-        move (i+1, 0) (n - (size-o))
-      else if o + n < 0 then
-        let size= Zed_char.size t.Zed_string0.chars.(i-1) in
-        move (i-1, size-1) (o + n)
-      else
-        (i, o+n)
-    in
-    move (i, o) n
-
-  let compare_index _ (i1,o1) (i2,o2)=
-    let r= compare  i1 i2 in
-    if r <> 0
-    then r
-    else compare o1 o2
-
-  let iter f t= Array.iter
-    (Zed_char.iter f)
-    t.Zed_string0.chars
+      move str (Zed_utf8.unsafe_next str ofs) (len - 1)
 
 
-  let compare t1 t2=
-    let open Zed_string0 in
+  let compare_index _str= compare
+
+  let iter f str= List.iter f (Zed_utf8.explode str)
+
+  let compare str1 str2=
     Zed_utils.list_compare
       ~compare:UChar.compare
-      (chars_to_raw_list t1.chars) (chars_to_raw_list t2.chars)
+      (Zed_utf8.explode str1) (Zed_utf8.explode str2)
 
   module US = Zed_string0.US0
   module Buf = struct

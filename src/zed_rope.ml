@@ -281,8 +281,8 @@ let insert_uChar rope pos ch =
     match CharInfo_width.width ch with
     | 0-> let glyph= get rope (pos-1) in
       let glyph= Zed_char.append glyph ch in
-      replace rope (pos-1) 1 (Leaf (Zed_string.of_char_list [glyph], (1, 1)))
-    | _-> let sub= (Leaf (Zed_string.of_char_list [Zed_char.unsafe_of_uChar ch], (1, 1))) in
+      replace rope (pos-1) 1 (Leaf (Zed_string.implode [glyph], (1, 1)))
+    | _-> let sub= (Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1))) in
       insert rope pos sub
 
 let lchop = function
@@ -834,7 +834,7 @@ module String_buffer = Buffer
 module Buffer = struct
   type t = {
     mutable acc : rope;
-    mutable buf : Zed_string.Buf.t;
+    mutable buf : Zed_string.Buf.buf;
     mutable idx : int;
   }
 
@@ -851,10 +851,10 @@ module Buffer = struct
       buffer.acc <- append buffer.acc (Leaf(str, (max_leaf_size,size)));
       Zed_string.Buf.reset buffer.buf;
       Zed_string.Buf.add_zChar buffer.buf x;
-      buffer.idx <- Zed_string.Buf.contents_len buffer.buf
+      buffer.idx <- Zed_string.Buf.length buffer.buf
     end else begin
       Zed_string.Buf.add_zChar buffer.buf x;
-      buffer.idx <- Zed_string.Buf.contents_len buffer.buf
+      buffer.idx <- Zed_string.Buf.length buffer.buf
     end
 
   let add_uChar buffer x =
@@ -864,10 +864,10 @@ module Buffer = struct
       buffer.acc <- append buffer.acc (Leaf(str, (max_leaf_size,size)));
       Zed_string.Buf.reset buffer.buf;
       Zed_string.Buf.add_uChar buffer.buf x;
-      buffer.idx <- Zed_string.Buf.contents_len buffer.buf
+      buffer.idx <- Zed_string.Buf.length buffer.buf
     end else begin
       Zed_string.Buf.add_uChar buffer.buf x;
-      buffer.idx <- Zed_string.Buf.contents_len buffer.buf
+      buffer.idx <- Zed_string.Buf.length buffer.buf
     end
 
   let add_rope buf rope= iter (add buf) rope
