@@ -96,10 +96,12 @@ module Zed_string0 = struct
           calc (w + Zed_char.width chars.(i)) (i+1)
         else
           Error { start; len= i - start; width= w }
-      else Ok {len= length; width= w }
+      else
+        let len= length - start in
+        Ok {len; width= w }
     in
     let calc_num num w i=
-      let num= min num length in
+      let num= min num (length - start) in
       let rec calc n w i=
         if i < length && n > 0 then
           if Zed_char.width chars.(i) > 0 then
