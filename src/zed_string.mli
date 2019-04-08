@@ -26,6 +26,7 @@ type width = (all_width, seg_width) result
 type t
   (** Type of Zed_string.t *)
 
+val unsafe_of_utf8 : string -> t
 val of_utf8 : string -> t
 val to_utf8 : t -> string
 

@@ -25,6 +25,7 @@ val core : t -> UChar.t
 val combined : t -> UChar.t list
   (** [combined char] returns the combining marks of the [char] *)
 
+val unsafe_of_utf8 : string -> t
 val of_utf8 : string -> t
 val to_utf8 : t -> string
 
@@ -36,6 +37,12 @@ val prop_uChar : UChar.t -> char_prop
 
 val prop : t -> char_prop
   (** [prop ch] returns the char_prop of [ch] *)
+
+val is_printable_core : UChar.t -> bool
+  (** Returns whether a [UChar.t] is a printable character and its width is not zero. *)
+
+val is_combining_mark : UChar.t -> bool
+  (** Returns whether a [UChar.t] is a combining mark. *)
 
 val size : t -> int
   (** [size ch] returns the size (number of characters) of [ch]. *)
@@ -70,10 +77,10 @@ val compare : t -> t -> int
 val mix_uChar : t -> UChar.t -> (t, t) result
   (** [mix_uChar ch uChar] tries to append [uChar] ch and returns [Ok result]. If [uChar] is not a combining mark, then an [Error (Zed_char.t consists of uChar) is returned. *)
 
-val of_uChars : UChar.t list -> t option * UChar.t list
+val of_uChars : ?trim:bool -> UChar.t list -> t option * UChar.t list
   (** [of_uChars uChars] transforms [uChars] to a tuple. The first value is an optional [Zed_char.t] and the second one is a list of remaining uChars. This function creates a Zed_char.t if the first uChar in uChars is a printable standalone glyph, and then, it appends all following combining marks to the Zed_char.t. After that, all remaining uChars returned as the second value in the tuple. Otherwise, if the first uChar is not printable or standalone glyph, the result will be (None, all uChars). *)
 
-val zChars_of_uChars : UChar.t list -> t list * UChar.t list
+val zChars_of_uChars : ?trim:bool -> UChar.t list -> t list * UChar.t list
   (** [zChars of_uChars uChars] transforms [uChars] to a tuple. The first value is a list of [Zed_char.t] and the second one is a list of remaining uChars. *)
 
 val unsafe_of_char : char -> t
