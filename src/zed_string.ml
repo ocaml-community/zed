@@ -35,15 +35,11 @@ module Zed_string0 = struct
 
   type t= Zed_utf8.t
 
-  external id : 'a -> 'a = "%identity"
-  let of_utf8 : string -> t= id
-  let to_utf8 : t -> string= id
-
   let aval_width= function
     | Ok {len=_;width}-> width
     | Error {start=_;len=_;width}-> width
 
-  let size str= List.length (Zed_utf8.explode str)
+  let size str= Zed_utf8.length str
 
   let length str=
     List.length (fst (Zed_char.zChars_of_uChars (Zed_utf8.explode str)))
@@ -55,7 +51,7 @@ module Zed_string0 = struct
     let rec aux str ofs=
       let chr, next= Zed_utf8.extract_next str ofs in
       if next >= str_len then
-        next
+        str_len
       else
         match Zed_char.prop_uChar chr with
         | Printable w->
@@ -155,36 +151,36 @@ module Zed_string0 = struct
 
   let explode str=
     let str_len= String.length str in
-    let rec aux str ofs=
-      if ofs < str_len then
-        let chr, next= extract_next str ofs in
-        chr :: aux str next
+    let rec aux acc str ofs=
+      if ofs > 0 then
+        let chr, prev= extract_prev str ofs in
+        aux (chr::acc) str prev
       else
-        []
+        acc
     in
-    aux str 0
+    aux [] str str_len
 
   let implode chars=
     String.concat "" (List.map Zed_char.to_utf8 chars)
 
   let init len (f: int -> Zed_char.t)=
-    let rec create n=
+    let rec create acc n=
       if n > 0 then
-        f (len - n) :: create (n-1)
-      else []
+        create ((f (n-1))::acc) (n-1)
+      else acc
     in
-    implode (create len)
+    implode (create [] len)
 
   let init_from_uChars len f=
     match len with
     | 0-> empty ()
     | len when len > 0 ->
-      let rec create n=
+      let rec create acc n=
         if n > 0 then
-          f (len - n) :: create (n-1)
-        else []
+          create ((f (n-1))::acc) (n-1)
+        else acc
       in
-      let uChars= create len in
+      let uChars= create [] len in
       let zChars, _= Zed_char.zChars_of_uChars uChars in
       implode zChars
     | _-> raise (Invalid_argument "Zed_string0.init_from_uChars")
@@ -193,6 +189,14 @@ module Zed_string0 = struct
   let of_uChars uChars=
     let zChars, uChars= Zed_char.zChars_of_uChars uChars in
     implode zChars, uChars
+
+  external id : 'a -> 'a = "%identity"
+  let unsafe_of_utf8 : string -> t= id
+  let of_utf8 : string -> t= fun str->
+    match of_uChars (Zed_utf8.explode str) with
+    | t, []-> t
+    | _-> failwith "malformed Zed_char sequence"
+  let to_utf8 : t -> string= id
 
   let for_all p str= List.for_all p (explode str)
 
@@ -301,12 +305,12 @@ module Zed_string0 = struct
     let of_t t= Zed_utf8.explode t|> Convert.of_list
     let to_t us=
       let len= US.length us in
-      let rec create i=
-        if i < len
-        then US.get us i :: create (i+1)
-        else []
+      let rec create acc i=
+        if i > 0
+        then create (US.get us (i-1) :: acc) (i-1)
+        else acc
       in
-      let uChars= create 0 in
+      let uChars= create [] len in
       of_uChars uChars
     let to_t_exn us= let t,_= to_t us in t
   end

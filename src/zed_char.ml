@@ -31,10 +31,6 @@ let zero= String.make 1 (Char.chr 0)
 let core t= Zed_utf8.unsafe_extract t 0
 let combined t= List.tl (Zed_utf8.explode t)
 
-external id : 'a -> 'a = "%identity"
-let of_utf8 : string -> t= id
-let to_utf8 : t -> string= id
-
 let prop_uChar uChar=
   match CharInfo_width.width uChar with
   | -1 -> Other
@@ -45,6 +41,16 @@ let prop_uChar uChar=
   | w-> Printable w
 
 let prop t= prop_uChar (Zed_utf8.unsafe_extract t 0)
+
+let is_printable_core uChar=
+  match prop_uChar uChar with
+  | Printable w when w > 0 -> true
+  | _-> false
+
+let is_combining_mark uChar=
+  match prop_uChar uChar with
+  | Printable w when w = 0 -> true
+  | _-> false
 
 let length= Zed_utf8.length
 let size= length
@@ -61,7 +67,7 @@ let get_opt t i=
 let append ch mark=
   match prop_uChar mark with
   | Printable 0-> ch ^ (Zed_utf8.singleton mark)
-  | _-> failwith "combing mark expected"
+  | _-> failwith "combining mark expected"
 
 let compare_core t1 t2=
   let core1= Zed_utf8.unsafe_extract t1 0
@@ -79,18 +85,27 @@ let mix_uChar zChar uChar=
   | _->
     Error (Zed_utf8.singleton uChar)
 
-let rec first_core uChars=
+let first_core ?(trim=false) uChars=
+  let rec aux uChars=
+    match uChars with
+    | []-> None, []
+    | uChar::tl->
+      let prop= prop_uChar uChar in
+      match prop with
+      | Printable w->
+        if w > 0
+        then Some (prop, uChar), tl
+        else aux tl
+      | Other-> Some (prop, uChar), tl
+      | Null-> Some (prop, uChar), tl
+  in
   match uChars with
   | []-> None, []
-  | uChar::tl->
-    let prop= prop_uChar uChar in
-    match prop with
-    | Printable w->
-      if w > 0
-      then Some (prop, uChar), tl
-      else first_core tl
-    | Other-> Some (prop, uChar), tl
-    | Null-> Some (prop, uChar), tl
+  | uChar::_->
+    if trim || is_printable_core uChar then
+      aux uChars
+    else
+      None, uChars
 
 let rec subsequent uChars=
   match uChars with
@@ -106,8 +121,8 @@ let rec subsequent uChars=
         uChar :: seq, remain
     | _-> [], uChars
 
-let of_uChars uChars=
-  match first_core uChars with
+let of_uChars ?(trim=false) uChars=
+  match first_core ~trim uChars with
   | None, tl-> None, tl
   | Some (Printable _w, uChar), tl->
     let combined, tl= subsequent tl in
@@ -117,11 +132,25 @@ let of_uChars uChars=
   | Some (Other, uChar), tl->
     Some (Zed_utf8.singleton uChar) ,tl
 
-let rec zChars_of_uChars uChars=
-  match of_uChars uChars with
-  | None, tl-> [], tl
-  | Some zChar, tl-> let zChars, tl= zChars_of_uChars tl in
-    zChar :: zChars, tl
+let zChars_of_uChars ?(trim=false) uChars=
+  let rec aux zChars uChars=
+    match of_uChars ~trim uChars with
+    | None, tl-> List.rev zChars, tl
+    | Some zChar, tl-> aux (zChar::zChars) tl
+  in
+  aux [] uChars
+
+external id : 'a -> 'a = "%identity"
+let unsafe_of_utf8 : string -> t=
+  fun str-> if String.length str > 0
+    then str
+    else failwith "malformed Zed_char sequence"
+let of_utf8 : string -> t= fun str->
+  match of_uChars (Zed_utf8.explode str) with
+  | Some zChar, []-> zChar
+  | _-> failwith "malformed Zed_char sequence"
+
+let to_utf8 : t -> string= id
 
 let unsafe_of_char c=
   Zed_utf8.singleton (UChar.of_char c)
