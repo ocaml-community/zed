@@ -158,7 +158,14 @@ module Zed_string0 = struct
       else
         acc
     in
-    aux [] str str_len
+    if str_len > 0 then
+      let uChar= Zed_utf8.unsafe_extract str 0 in
+      if Zed_char.is_combining_mark uChar then
+        fail str 0 "invalid start of Zed_char sequence"
+      else
+        aux [] str str_len
+    else
+      raise Out_of_bounds
 
   let implode chars=
     String.concat "" (List.map Zed_char.to_utf8 chars)
