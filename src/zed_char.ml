@@ -102,10 +102,10 @@ let first_core ?(trim=false) uChars=
   match uChars with
   | []-> None, []
   | uChar::_->
-    if trim || is_printable_core uChar then
-      aux uChars
-    else
+    if not trim && is_combining_mark uChar then
       None, uChars
+    else
+      aux uChars
 
 let rec subsequent uChars=
   match uChars with
@@ -122,15 +122,18 @@ let rec subsequent uChars=
     | _-> [], uChars
 
 let of_uChars ?(trim=false) uChars=
-  match first_core ~trim uChars with
-  | None, tl-> None, tl
-  | Some (Printable _w, uChar), tl->
-    let combined, tl= subsequent tl in
-    Some (Zed_utf8.implode (uChar::combined)), tl
-  | Some (Null, uChar), tl->
-    Some (Zed_utf8.singleton uChar) ,tl
-  | Some (Other, uChar), tl->
-    Some (Zed_utf8.singleton uChar) ,tl
+  match uChars with
+  | []-> None, []
+  | uChar::tl->
+    match first_core ~trim uChars with
+    | None, _-> Some (Zed_utf8.singleton uChar), tl
+    | Some (Printable _w, uChar), tl->
+      let combined, tl= subsequent tl in
+      Some (Zed_utf8.implode (uChar::combined)), tl
+    | Some (Null, uChar), tl->
+      Some (Zed_utf8.singleton uChar) ,tl
+    | Some (Other, uChar), tl->
+      Some (Zed_utf8.singleton uChar) ,tl
 
 let zChars_of_uChars ?(trim=false) uChars=
   let rec aux zChars uChars=
