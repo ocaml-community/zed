@@ -39,6 +39,8 @@ module Zed_string0 = struct
     | Ok {len=_;width}-> width
     | Error {start=_;len=_;width}-> width
 
+  let bytes str= String.length str
+
   let size str= Zed_utf8.length str
 
   let length str=
@@ -48,19 +50,21 @@ module Zed_string0 = struct
 
   let unsafe_next str ofs=
     let str_len= String.length str in
-    let rec aux str ofs=
-      let chr, next= Zed_utf8.extract_next str ofs in
-      if next >= str_len then
+    let rec skip str ofs=
+      if ofs >= str_len then
         str_len
       else
-        match Zed_char.prop_uChar chr with
-        | Printable w->
-          if w > 0 then next
-          else aux str next
-        | Other-> next
-        | Null-> next
+        let chr, next= Zed_utf8.extract_next str ofs in
+        if Zed_char.is_combining_mark chr then
+          skip str next
+        else
+          ofs
     in
-    aux str ofs
+    let chr, next= Zed_utf8.extract_next str ofs in
+    if Zed_char.is_printable_core chr then
+      skip str next
+    else
+      next
 
   let next str ofs =
     if ofs < 0 || ofs >= String.length str then
@@ -165,7 +169,7 @@ module Zed_string0 = struct
       else
         aux [] str str_len
     else
-      raise Out_of_bounds
+      []
 
   let implode chars=
     String.concat "" (List.map Zed_char.to_utf8 chars)
@@ -271,12 +275,20 @@ module Zed_string0 = struct
 
   let compare_index (_:t) i j= Pervasives.compare i j
 
-  let sub s ofs len =
-    if ofs < 0 || len < 0 || ofs > length s - len then
+  let sub_ofs s ofs len =
+    if ofs < 0 || len < 0 || ofs > bytes s - len then
       invalid_arg "Zed_string.sub"
     else
       let ofs_end= move_l s ofs len in
       String.sub s ofs (ofs_end - ofs)
+
+  let sub s idx len =
+    if idx < 0 || len < 0 || idx > length s - len then
+      invalid_arg "Zed_string.sub"
+    else
+      let ofs_start= move_l s 0 idx in
+      let ofs_end= move_l s ofs_start len in
+      String.sub s ofs_start (ofs_end - ofs_start)
 
   let after s i=
     let len= length s in

@@ -49,6 +49,9 @@ val get_raw : t -> int -> UChar.t
 val empty : unit -> t
 val width : ?start:int -> ?num:int -> t -> width
 
+val bytes : t -> index
+  (** [bytes str] returns the number of [str]. It's also the index point to the end of [str]. *)
+
 val size : t -> int
   (** [size str] returns the number of UChar.t in [str]. *)
 
@@ -84,6 +87,7 @@ val first : t -> index
 val last : t -> index
 val move : t -> index -> int -> index
 val compare_index : t -> index -> index -> int
+val sub_ofs : t -> index -> int -> t
 val sub : t -> int -> int -> t
 val after : t -> int -> t
 val unsafe_sub_equal : t -> int -> t -> int -> bool
