@@ -13,6 +13,8 @@
     efficiently find the beginning of a line and to convert offset to
     line and column number. *)
 
+open Result
+
 exception Out_of_bounds
   (** Exception raised when trying to access a position outside the
       bounds of a set. *)

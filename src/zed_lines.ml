@@ -8,6 +8,8 @@
  * This file is a part of Zed, an editor engine.
  *)
 
+open Result
+
 open CamomileLibraryDefault.Camomile
 
 exception Out_of_bounds
