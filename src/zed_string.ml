@@ -95,6 +95,20 @@ module Zed_string0 = struct
     else
       move_l str (unsafe_next str ofs) (len - 1)
 
+  let move_b str ofs len=
+    let rec move str ofs len=
+      if len = 0 then
+        ofs
+      else if ofs < 0 then
+        raise Out_of_bounds
+      else
+        move str (unsafe_prev str ofs) (len - 1)
+    in
+    if ofs < 0 || ofs > String.length str then
+      raise Out_of_bounds
+    else
+      move str ofs len
+
   let extract str ofs=
     let next= next str ofs in
     Zed_char.of_utf8 (String.sub str ofs (next - ofs))
@@ -270,11 +284,8 @@ module Zed_string0 = struct
   let last t= max (length t - 1) 0
 
   let move t i n=
-    let len= length t in
-    let pos= i + n in
-    if i >= 0 && i < len
-    then pos
-    else raise (Invalid_argument "Zed_string.move: index out of bounds")
+    if n >= 0 then move_l t i n
+    else move_b t i n
 
   let compare_index (_:t) i j= Pervasives.compare i j
 
