@@ -123,7 +123,7 @@ module Zed_string0 = struct
 
   let empty ()= ""
 
-  let width ?(start=0) ?num str=
+  let width_ofs ?(start=0) ?num str=
     let str_len= String.length str in
     let rec calc w idx ofs=
       if ofs < str_len then
@@ -148,10 +148,13 @@ module Zed_string0 = struct
       in
       calc num w idx ofs
     in
-    let ofs= move_l str 0 start in
     match num with
-    | Some num-> calc_num num 0 start ofs
-    | None-> calc 0 start ofs
+    | Some num-> calc_num num 0 start start
+    | None-> calc 0 start start
+
+  let width ?(start=0) ?num str=
+    let ofs= move_l str 0 start in
+    width_ofs ~start:ofs ?num str
 
   let explode str=
     let str_len= String.length str in
