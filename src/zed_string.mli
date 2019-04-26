@@ -47,6 +47,7 @@ type index = int
 val get : t -> int -> Zed_char.t
 val get_raw : t -> int -> UChar.t
 val empty : unit -> t
+val width_ofs : ?start:index -> ?num:int -> t -> width
 val width : ?start:int -> ?num:int -> t -> width
 
 val bytes : t -> index
