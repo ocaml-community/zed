@@ -30,6 +30,7 @@ val unsafe_of_utf8 : string -> t
 val of_utf8 : string -> t
 val to_utf8 : t -> string
 
+val rev_explode : t -> Zed_char.t list
 val explode : t -> Zed_char.t list
 val implode : Zed_char.t list -> t
 
@@ -87,6 +88,7 @@ val compare : t -> t -> int
 val first : t -> index
 val last : t -> index
 val move : t -> index -> int -> index
+val move_raw : t -> index -> int -> index
 val compare_index : t -> index -> index -> int
 val sub_ofs : t -> index -> int -> t
 val sub : t -> int -> int -> t
@@ -180,7 +182,7 @@ module US_Raw : sig
   val get : t -> int -> UChar.t
   val init : int -> (int -> UChar.t) -> t
   val length : t -> int
-  type index
+  type index= int
   val check_range : t -> int -> bool
 
   val look : t -> index -> UChar.t

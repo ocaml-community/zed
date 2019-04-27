@@ -374,7 +374,7 @@ let rec rev_fold_leaf f rope acc =
    +-----------------------------------------------------------------+ *)
 
 let rec cmp_loop str1 ofs1 str2 ofs2 rest1 rest2 =
-  if ofs1 = Zed_string.length str1 then
+  if ofs1 = Zed_string.bytes str1 then
     match rest1 with
       | [] ->
           if ofs2 = Zed_string.length str2 && rest2 = [] then
@@ -383,15 +383,15 @@ let rec cmp_loop str1 ofs1 str2 ofs2 rest1 rest2 =
             -1
       | rope1 :: rest1 ->
           cmp_search1 rope1 str2 ofs2 rest1 rest2
-  else if ofs2 = Zed_string.length str2 then
+  else if ofs2 = Zed_string.bytes str2 then
     match rest2 with
       | [] ->
           1
       | rope2 :: rest2 ->
           cmp_search2 rope2 str1 ofs1 rest1 rest2
   else
-    let chr1, ofs1 = Zed_string.get str1 ofs1, ofs1+1
-    and chr2, ofs2 = Zed_string.get str2 ofs2, ofs2+1 in
+    let chr1, ofs1 = Zed_string.extract_next str1 ofs1
+    and chr2, ofs2 = Zed_string.extract_next str2 ofs2 in
     let d = Zed_char.compare_raw chr1 chr2 in
     if d = 0 then
       cmp_loop str1 ofs1 str2 ofs2 rest1 rest2
@@ -441,6 +441,8 @@ module Zip = struct
   }
 
   type t = {
+    idx : int;
+    (* The index in byte of the zipper in the current leaf. *)
     pos : int;
     (* The index in character of the zipper in the current leaf. *)
     zip : rope_zipper;
@@ -449,7 +451,8 @@ module Zip = struct
   let rec make_f_rec ofs rope pos rest_b rest_f =
     match rope with
     | Leaf(str, _) ->
-      { pos = pos;
+      { idx= Zed_string.move str 0 pos;
+        pos = pos;
         zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }
     | Node(_, _, r1, _, r2) ->
       let len1 = length r1 in
@@ -464,8 +467,9 @@ module Zip = struct
 
   let rec make_b_rec ofs rope pos rest_b rest_f =
     match rope with
-    | Leaf(str, _) ->
-      { pos = pos;
+    | Leaf(str, (len,_)) ->
+      { idx= Zed_string.move str (Zed_string.bytes str) (- (len - pos));
+        pos = pos;
         zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }
     | Node(_, _, r1, _, r2) ->
       let len1 = length r1 in
@@ -476,7 +480,7 @@ module Zip = struct
 
   let make_b rope pos =
     let len = length rope in
-    if pos < 0 || pos > length rope then raise Out_of_bounds;
+    if pos < 0 || pos > len then raise Out_of_bounds;
     let pos = len - pos in
     make_b_rec pos rope pos [] []
 
@@ -486,33 +490,34 @@ module Zip = struct
   let rec next_leaf ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, _) ->
-      let chr= Zed_string.get str 0 in
+      let chr, idx= Zed_string.extract_next str 0 in
       (chr,
-       { pos = 1;
+       { idx;
+         pos = 1;
          zip = { str; ofs; leaf = rope; rest_b; rest_f } })
     | Node(_, _, r1, _, r2) ->
       next_leaf ofs r1 rest_b (r2 :: rest_f)
 
   let next zip =
-    if zip.pos = Zed_string.length zip.zip.str then
+    if zip.idx = Zed_string.bytes zip.zip.str then
       match zip.zip.rest_f with
       | [] ->
         raise Out_of_bounds
       | rope :: rest ->
         next_leaf (zip.zip.ofs + length zip.zip.leaf) rope (zip.zip.leaf :: zip.zip.rest_b) rest
     else
-      let chr= Zed_string.get zip.zip.str zip.pos in
-      (chr, { zip with pos = zip.pos + 1 })
+      let chr, idx= Zed_string.extract_next zip.zip.str zip.idx in
+      (chr, { zip with idx; pos = zip.pos + 1 })
 
   let rec prev_leaf ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, (len,_size)) ->
-      let chr=
-        let len= Zed_string.length str - 1 in
-        Zed_string.get str len
+      let chr, idx=
+        Zed_string.extract_prev str (Zed_string.bytes str)
       in
       (chr,
-       { pos = len - 1;
+       { idx;
+         pos = len - 1;
          zip = { str; ofs = ofs - len; leaf = rope; rest_b; rest_f } })
     | Node(_, _, r1, _, r2) ->
       prev_leaf ofs r2 (r1 :: rest_b) rest_f
@@ -525,14 +530,15 @@ module Zip = struct
       | rope :: rest ->
         prev_leaf zip.zip.ofs rope rest (zip.zip.leaf :: zip.zip.rest_f)
     else
-      let chr= Zed_string.get zip.zip.str (zip.pos-1) in
-      (chr, { zip with pos = zip.pos - 1 })
+      let chr, idx= Zed_string.extract_prev zip.zip.str zip.idx in
+      (chr, { zip with idx; pos = zip.pos - 1 })
 
   let rec move_f n ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, (len,_size)) ->
       if n <= len then
-        { pos = n;
+        { idx= Zed_string.move str 0 n;
+          pos = n;
           zip = { str; ofs; leaf = rope; rest_b; rest_f } }
       else begin
         match rest_f with
@@ -548,7 +554,8 @@ module Zip = struct
     match rope with
     | Leaf(str, (len,_size)) ->
       if n <= len then
-        { pos = len - n;
+        { idx= Zed_string.move str (Zed_string.bytes str) (-n);
+          pos = len - n;
           zip = { str; ofs; leaf = rope; rest_b; rest_f } }
       else begin
         match rest_b with
@@ -564,7 +571,9 @@ module Zip = struct
     if n > 0 then
       let len = length zip.zip.leaf in
       if zip.pos + n <= len then
-        { zip with pos = zip.pos + n }
+        { zip with
+          idx= Zed_string.move zip.zip.str zip.idx n;
+          pos = zip.pos + n }
       else
         match zip.zip.rest_f with
         | [] ->
@@ -578,7 +587,9 @@ module Zip = struct
             rest_f
     else
     if zip.pos + n >= 0 then
-      { zip with pos = zip.pos + n }
+      { zip with
+        idx= Zed_string.move zip.zip.str zip.idx n;
+        pos = zip.pos + n }
     else
       match zip.zip.rest_b with
       | [] ->
@@ -591,8 +602,8 @@ module Zip = struct
           rest_b
           (zip.zip.leaf :: zip.zip.rest_f)
 
-  let at_bos zip= zip.zip.rest_b = [] && zip.pos = 0
-  let at_eos zip= zip.zip.rest_f = [] && zip.pos = Zed_string.length zip.zip.str
+  let at_bos zip= zip.zip.rest_b = [] && zip.idx = 0
+  let at_eos zip= zip.zip.rest_f = [] && zip.idx = Zed_string.bytes zip.zip.str
 
   let rec sub_rec acc ropes len =
     match ropes with
@@ -663,32 +674,48 @@ module Zip_raw = struct
   }
 
   type t = {
+    idx : int;
+    (* The index in byte of the zipper in the current leaf. *)
     pos : int;
     (* The index in character of the zipper in the current leaf. *)
     zip : rope_zipper;
   }
 
-  let rec make_rec ofs rope pos rest_b rest_f =
+  let rec make_f_rec ofs rope pos rest_b rest_f =
     match rope with
     | Leaf(str, _) ->
-      { pos = pos;
+      { idx= Zed_string.move_raw str 0 pos;
+        pos = pos;
         zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }
     | Node(_, _, r1, _, r2) ->
       let size1= size r1 in
       if pos < size1 then
-        make_rec ofs r1 pos rest_b (r2 :: rest_f)
+        make_f_rec ofs r1 pos rest_b (r2 :: rest_f)
       else
-        make_rec ofs r2 (pos - size1) (r1 :: rest_b) rest_f
+        make_f_rec ofs r2 (pos - size1) (r1 :: rest_b) rest_f
 
   let make_f rope pos =
     if pos < 0 || pos > size rope then raise Out_of_bounds;
-    make_rec pos rope pos [] []
+    make_f_rec pos rope pos [] []
+
+  let rec make_b_rec ofs rope pos rest_b rest_f =
+    match rope with
+      | Leaf(str, (len,_)) ->
+          { idx= Zed_string.move_raw str (Zed_string.bytes str) (- (len - pos));
+            pos = pos;
+            zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }
+      | Node(_, _, r1, _, r2) ->
+          let len1 = length r1 in
+          if pos < len1 then
+            make_b_rec ofs r1 pos rest_b (r2 :: rest_f)
+          else
+            make_b_rec ofs r2 (pos - len1) (r1 :: rest_b) rest_f
 
   let make_b rope pos =
     let size = size rope in
     if pos < 0 || pos > size then raise Out_of_bounds;
     let pos = size - pos in
-    make_rec pos rope pos [] []
+    make_b_rec pos rope pos [] []
 
   let offset zip =
     zip.zip.ofs + zip.pos
@@ -696,9 +723,10 @@ module Zip_raw = struct
   let rec next_leaf ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, _) ->
-      let chr= Zed_string.get_raw str 0 in
+      let chr, idx= Zed_utf8.unsafe_extract_next (Zed_string.to_utf8 str) 0 in
       (chr,
-       { pos = 1;
+       { idx;
+         pos = 1;
          zip = { str; ofs; leaf = rope; rest_b; rest_f } })
     | Node(_, _, r1, _, r2) ->
       next_leaf ofs r1 rest_b (r2 :: rest_f)
@@ -711,18 +739,19 @@ module Zip_raw = struct
       | rope :: rest ->
         next_leaf (zip.zip.ofs + size zip.zip.leaf) rope (zip.zip.leaf :: zip.zip.rest_b) rest
     else
-      let chr= Zed_string.get_raw zip.zip.str zip.pos in
-      (chr, { zip with pos = zip.pos + 1 })
+      let chr, idx= Zed_utf8.unsafe_extract_next (Zed_string.to_utf8 zip.zip.str) zip.idx in
+      (chr, { zip with idx; pos = zip.pos + 1 })
 
   let rec prev_leaf ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, (_len, size)) ->
-      let chr=
-        let len= Zed_string.size str - 1 in
-        Zed_string.get_raw str len
+      let chr, idx =
+        let str= Zed_string.to_utf8 str in
+        Zed_utf8.unsafe_extract_prev str (String.length str)
       in
       (chr,
-       { pos = size - 1;
+       { idx;
+         pos = size - 1;
          zip = { str; ofs = ofs - size; leaf = rope; rest_b; rest_f } })
     | Node(_, _, r1, _, r2) ->
       prev_leaf ofs r2 (r1 :: rest_b) rest_f
@@ -735,14 +764,15 @@ module Zip_raw = struct
       | rope :: rest ->
         prev_leaf zip.zip.ofs rope rest (zip.zip.leaf :: zip.zip.rest_f)
     else
-      let chr= Zed_string.get_raw zip.zip.str (zip.pos-1) in
-      (chr, { zip with pos = zip.pos - 1 })
+      let chr, idx= Zed_utf8.unsafe_extract_prev (Zed_string.to_utf8 zip.zip.str) zip.idx in
+      (chr, { zip with idx; pos = zip.pos - 1 })
 
   let rec move_f n ofs rope rest_b rest_f =
     match rope with
     | Leaf(str, (_,size)) ->
       if n <= size then
-        { pos = n;
+        { idx= Zed_string.move_raw str 0 n;
+          pos = n;
           zip = { str; ofs; leaf = rope; rest_b; rest_f } }
       else begin
         match rest_f with
@@ -758,7 +788,8 @@ module Zip_raw = struct
     match rope with
     | Leaf(str, (_,size)) ->
       if n <= size then
-        { pos = size - n;
+        { idx= Zed_string.move_raw str (Zed_string.bytes str) (-n);
+          pos = size - n;
           zip = { str; ofs; leaf = rope; rest_b; rest_f } }
       else begin
         match rest_b with
@@ -774,7 +805,9 @@ module Zip_raw = struct
     if n > 0 then
       let size = size zip.zip.leaf in
       if zip.pos + n <= size then
-        { zip with pos = zip.pos + n }
+        { zip with
+          idx= Zed_string.move_raw zip.zip.str zip.idx n;
+          pos = zip.pos + n }
       else
         match zip.zip.rest_f with
         | [] ->
@@ -788,7 +821,9 @@ module Zip_raw = struct
             rest_f
     else
     if zip.pos + n >= 0 then
-      { zip with pos = zip.pos + n }
+      { zip with
+        idx = Zed_string.move_raw zip.zip.str zip.idx (-n);
+        pos = zip.pos + n }
     else
       match zip.zip.rest_b with
       | [] ->
@@ -801,8 +836,8 @@ module Zip_raw = struct
           rest_b
           (zip.zip.leaf :: zip.zip.rest_f)
 
-  let at_bos zip= zip.zip.rest_b = [] && zip.pos = 0
-  let at_eos zip= zip.zip.rest_f = [] && zip.pos = Zed_string.length zip.zip.str
+  let at_bos zip= zip.zip.rest_b = [] && zip.idx = 0
+  let at_eos zip= zip.zip.rest_f = [] && zip.idx = Zed_string.bytes zip.zip.str
 
   let rec find_f f zip =
     if at_eos zip then

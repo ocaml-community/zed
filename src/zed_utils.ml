@@ -29,13 +29,18 @@ module Convert(US: UnicodeString.Type)= struct
     US.Buf.contents buf
 
   let to_uChars us=
+    let first= US.first us
+    and last= US.last us in
     let length= US.length us in
-    let rec create i=
-      if i < length
-      then US.get us i :: create (i+1)
-      else []
+    let rec create acc i=
+      if US.compare_index us i first >= 0
+      then create (US.look us i :: acc) (US.prev us i)
+      else acc
     in
-    create 0
+    if length > 0 then
+      create [] last
+    else
+      []
 end
 
 let array_rev a=

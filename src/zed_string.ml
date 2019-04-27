@@ -43,9 +43,6 @@ module Zed_string0 = struct
 
   let size str= Zed_utf8.length str
 
-  let length str=
-    List.length (fst (Zed_char.zChars_of_uChars (Zed_utf8.explode str)))
-
   let copy t= t
 
   let unsafe_next str ofs=
@@ -54,13 +51,13 @@ module Zed_string0 = struct
       if ofs >= str_len then
         str_len
       else
-        let chr, next= Zed_utf8.extract_next str ofs in
+        let chr, next= Zed_utf8.unsafe_extract_next str ofs in
         if Zed_char.is_combining_mark chr then
           skip str next
         else
           ofs
     in
-    let chr, next= Zed_utf8.extract_next str ofs in
+    let chr, next= Zed_utf8.unsafe_extract_next str ofs in
     if Zed_char.is_printable_core chr then
       skip str next
     else
@@ -71,6 +68,16 @@ module Zed_string0 = struct
       raise Out_of_bounds
     else
       unsafe_next str ofs
+
+  let length str=
+    let eos= String.length str in
+    let rec length len ofs=
+      if ofs < eos then
+        length (len + 1) (unsafe_next str ofs)
+      else
+        len
+    in
+    length 0 0
 
   let rec unsafe_prev str ofs=
     if ofs <= 0 then
@@ -103,6 +110,28 @@ module Zed_string0 = struct
         raise Out_of_bounds
       else
         move str (unsafe_prev str ofs) (len - 1)
+    in
+    if ofs < 0 || ofs > String.length str then
+      raise Out_of_bounds
+    else
+      move str ofs len
+
+  let rec move_l_raw str ofs len=
+    if len = 0 then
+      ofs
+    else if ofs >= String.length str then
+      raise Out_of_bounds
+    else
+      move_l_raw str (Zed_utf8.unsafe_next str ofs) (len - 1)
+
+  let move_b_raw str ofs len=
+    let rec move str ofs len=
+      if len = 0 then
+        ofs
+      else if ofs < 0 then
+        raise Out_of_bounds
+      else
+        move str (Zed_utf8.unsafe_prev str ofs) (len - 1)
     in
     if ofs < 0 || ofs > String.length str then
       raise Out_of_bounds
@@ -188,6 +217,24 @@ module Zed_string0 = struct
     else
       []
 
+  let rev_explode str=
+    let str_len= String.length str in
+    let rec aux acc ofs=
+      if ofs < str_len then
+        let chr, next= extract_next str ofs in
+        aux (chr::acc) next
+      else
+        []
+    in
+    if str_len > 0 then
+      let uChar= Zed_utf8.unsafe_extract str 0 in
+      if Zed_char.is_combining_mark uChar then
+        fail str 0 "invalid start of Zed_char sequence"
+      else
+        aux [] 0
+    else
+      []
+
   let implode chars=
     String.concat "" (List.map Zed_char.to_utf8 chars)
 
@@ -215,15 +262,23 @@ module Zed_string0 = struct
 
 
   let of_uChars uChars=
-    let zChars, uChars= Zed_char.zChars_of_uChars uChars in
-    implode zChars, uChars
+    (*let zChars, uChars= Zed_char.zChars_of_uChars uChars in
+    implode zChars, uChars*)
+    match uChars with
+    | []-> "", []
+    | fst::_->
+      if Zed_char.is_combining_mark fst then
+        ("", uChars)
+      else
+        (uChars |> List.map Zed_utf8.singleton |> String.concat "", [])
 
   external id : 'a -> 'a = "%identity"
   let unsafe_of_utf8 : string -> t= id
   let of_utf8 : string -> t= fun str->
-    match of_uChars (Zed_utf8.explode str) with
-    | t, []-> t
-    | _-> failwith "malformed Zed_char sequence"
+    if Zed_char.is_combining_mark (Zed_utf8.extract str 0) then
+      failwith "malformed Zed_char sequence"
+    else
+      unsafe_of_utf8 str
   let to_utf8 : t -> string= id
 
   let for_all p str= List.for_all p (explode str)
@@ -252,7 +307,7 @@ module Zed_string0 = struct
 
   let iter f str= List.iter f (explode str)
 
-  let rev_iter f str= List.iter f (List.rev (explode str))
+  let rev_iter f str= List.iter f (rev_explode str)
 
   let fold f str acc=
     let rec aux f chars acc=
@@ -268,13 +323,13 @@ module Zed_string0 = struct
       | []-> acc
       | chr::tl-> aux f tl (f chr acc)
     in
-    aux f (List.rev (explode str)) acc
+    aux f (rev_explode str) acc
 
   let map f str=
     implode (List.map f (explode str))
 
   let rev_map f str=
-    implode (List.map f (List.rev (explode str)))
+    implode (List.map f (rev_explode str))
 
   let compare str1 str2= Zed_utils.list_compare
     ~compare:Zed_char.compare_raw
@@ -286,6 +341,10 @@ module Zed_string0 = struct
   let move t i n=
     if n >= 0 then move_l t i n
     else move_b t i n
+
+  let move_raw t i n=
+    if n >= 0 then move_l_raw t i n
+    else move_b_raw t i n
 
   let compare_index (_:t) i j= Pervasives.compare i j
 
@@ -312,14 +371,14 @@ module Zed_string0 = struct
       empty ()
 
   let rec unsafe_sub_equal str ofs sub ofs_sub=
-    if ofs_sub = length sub then
+    if ofs_sub = String.length sub then
       true
     else
-      (get str ofs = get sub ofs_sub)
+      (String.unsafe_get str ofs = String.unsafe_get sub ofs_sub)
       && unsafe_sub_equal str (ofs + 1) sub (ofs_sub + 1)
 
   let starts_with ~prefix str=
-    if length prefix > length str then
+    if String.length prefix > String.length str then
       false
     else
       unsafe_sub_equal str 0 prefix 0
@@ -332,21 +391,6 @@ module Zed_string0 = struct
 
   let ends_with str ends=
     Zed_utf8.ends_with str ends
-
-  module US0(US:UnicodeString.Type) = struct
-    module Convert = Zed_utils.Convert(US)
-    let of_t t= Zed_utf8.explode t|> Convert.of_list
-    let to_t us=
-      let len= US.length us in
-      let rec create acc i=
-        if i > 0
-        then create (US.get us (i-1) :: acc) (i-1)
-        else acc
-      in
-      let uChars= create [] len in
-      of_uChars uChars
-    let to_t_exn us= let t,_= to_t us in t
-  end
 
   module Buf0 = struct
     type buf= Buffer.t
@@ -370,6 +414,30 @@ module Zed_string0 = struct
     let add_string b s= Buffer.add_string b s
 
     let add_buffer b1 b2= Buffer.add_buffer b1 b2
+  end
+
+  module US0(US:UnicodeString.Type) = struct
+    module Convert = Zed_utils.Convert(US)
+    let of_t t= Zed_utf8.explode t|> Convert.of_list
+
+    let to_t us=
+      let first= US.first us
+      and last= US.last us in
+      let length= US.length us in
+      let rec create acc i=
+        if US.compare_index us i first >= 0
+        then create (US.look us i :: acc) (US.prev us i)
+        else acc
+      in
+      let uChars=
+        if length > 0 then
+          create [] last
+        else
+          []
+      in
+      of_uChars uChars
+
+    let to_t_exn us= let t,_= to_t us in t
   end
 end
 
@@ -424,14 +492,7 @@ module US_Raw = struct
   let first _= 0
   let last str= Zed_utf8.prev str (String.length str)
 
-  let rec move str ofs len=
-    if len = 0 then
-      ofs
-    else if ofs = String.length str then
-      raise Out_of_bounds
-    else
-      move str (Zed_utf8.unsafe_next str ofs) (len - 1)
-
+  let move= Zed_string0.move_raw
 
   let compare_index _str= compare
 
