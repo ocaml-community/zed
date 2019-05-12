@@ -58,7 +58,7 @@ module Zed_string0 = struct
           ofs
     in
     let chr, next= Zed_utf8.unsafe_extract_next str ofs in
-    if Zed_char.is_printable_core chr then
+    if Zed_char.is_printable chr then
       skip str next
     else
       next
@@ -84,9 +84,11 @@ module Zed_string0 = struct
       fail str ofs "invalid start of Zed_char sequence"
     else
       let chr, prev= Zed_utf8.extract_prev str ofs in
-      match Zed_char.prop_uChar chr with
-      | Printable 0-> unsafe_prev str prev
-      | _-> prev
+      if prev = 0 then 0
+      else
+        match Zed_char.prop_uChar chr with
+        | Printable 0-> unsafe_prev str prev
+        | _-> prev
 
   let prev str ofs=
     if ofs <= 0 || ofs > String.length str then
@@ -140,15 +142,15 @@ module Zed_string0 = struct
 
   let extract str ofs=
     let next= next str ofs in
-    Zed_char.of_utf8 (String.sub str ofs (next - ofs))
+    Zed_char.unsafe_of_utf8 (String.sub str ofs (next - ofs))
 
   let extract_next str ofs=
     let next= next str ofs in
-    (Zed_char.of_utf8 (String.sub str ofs (next - ofs)), next)
+    (Zed_char.unsafe_of_utf8 (String.sub str ofs (next - ofs)), next)
 
   let extract_prev str ofs=
     let prev= prev str ofs in
-    (Zed_char.of_utf8 (String.sub str prev (ofs - prev)), prev)
+    (Zed_char.unsafe_of_utf8 (String.sub str prev (ofs - prev)), prev)
 
   let to_raw_list str= Zed_utf8.explode str
 
@@ -275,7 +277,8 @@ module Zed_string0 = struct
   external id : 'a -> 'a = "%identity"
   let unsafe_of_utf8 : string -> t= id
   let of_utf8 : string -> t= fun str->
-    if Zed_char.is_combining_mark (Zed_utf8.extract str 0) then
+    if String.length str = 0 then ""
+    else if Zed_char.is_combining_mark (Zed_utf8.extract str 0) then
       failwith "malformed Zed_char sequence"
     else
       unsafe_of_utf8 str
