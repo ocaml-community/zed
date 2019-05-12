@@ -48,6 +48,32 @@ let is_empty= function
   | Leaf(_, (0, 0)) -> true
   | _ -> false
 
+let rec trim_hd t=
+  match t with
+  | Leaf (str, (l, _))->
+    let hd, _= Zed_string.extract_next str 0 in
+    let hd= hd
+      |> Zed_char.to_utf8
+      |> Zed_string.unsafe_of_utf8
+    in
+    let after= Zed_string.after str 1 in
+    let size= Zed_string.size after in
+    (Leaf (after, (l-1, size)), hd)
+  | Node (d, (ll, _sl), l, (lr, sr), r)->
+    let t, hd= trim_hd l in
+    let size= size t in
+    (Node (d, (ll-1, size), t, (lr, sr), r), hd)
+
+let append_cm t cm=
+  let size= Zed_string.size cm in
+  let rec append_cm t=
+    match t with
+    | Leaf (str, (l, s))-> Leaf (Zed_string.append str cm, (l, s + size))
+    | Node (d, (ll, sl), l, (lr, sr), r)->
+      Node (d, (ll, sl), l, (lr, sr + size), append_cm r)
+  in
+  append_cm t
+
 (* +-----------------------------------------------------------------+
    | Balancing                                                       |
    +-----------------------------------------------------------------+ *)
@@ -132,48 +158,6 @@ let balance rope=
    | Leaf operations                                               |
    +-----------------------------------------------------------------+ *)
 
-let append rope1 rope2 =
-  match rope1, rope2 with
-    | Leaf(_, (0,_)), _ ->
-        rope2
-    | _, Leaf(_, (0,_)) ->
-        rope1
-    | Leaf(text1, (len1, size1)), Leaf(text2, (len2, size2))
-      when len1 + len2 <= max_leaf_size ->
-        Leaf(Zed_string.append text1 text2, (len1+len2, size1+size2))
-    | Node(d, len_l, rope_l, _, Leaf(text1, (len1,size1))), Leaf(text2, (len2,size2))
-      when len1 + len2 <= max_leaf_size ->
-      let ls= len1+len2, size1+size2 in
-        Node(
-          d,
-          len_l,
-          rope_l,
-          ls,
-          Leaf(Zed_string.append text1 text2, ls))
-    | Leaf(text1, (len1,size1)), Node(d, _, Leaf(text2, (len2,size2)), len_r, rope_r)
-      when len1 + len2 <= max_leaf_size ->
-      let ls= len1+len2, size1+size2 in
-        Node(
-          d,
-          ls,
-          Leaf(Zed_string.append text1 text2, ls),
-          len_r,
-          rope_r)
-    | _ ->
-      balance (Node(
-        1 + max (depth rope1) (depth rope2),
-        (length rope1, size rope1), rope1,
-        (length rope2, size rope2), rope2))
-
-let concat sep l =
-  let rec loop acc = function
-    | [] -> acc
-    | x :: l -> loop (append (append acc sep) x) l
-  in
-  match l with
-    | [] -> empty ()
-    | x :: l -> loop x l
-
 let rec unsafe_get idx rope =
   match rope with
     | Leaf(text, _) ->
@@ -205,6 +189,66 @@ let get_raw rope idx =
     raise Out_of_bounds
   else
     unsafe_get_raw idx rope
+
+let append rope1 rope2 =
+  let len_12_comb=
+    if length rope1 > 0 && length rope2 > 0 then
+      Zed_char.is_combining_mark (Zed_char.core (get rope2 0))
+    else
+      false
+  in
+  let len12 l1 l2= if len_12_comb then l1 + l2 - 1 else l1 + l2 in
+  match rope1, rope2 with
+    | Leaf(_, (0,_)), _ ->
+        rope2
+    | _, Leaf(_, (0,_)) ->
+        rope1
+    | Leaf(text1, (len1, size1)), Leaf(text2, (len2, size2))
+      when len12 len1 len2 <= max_leaf_size ->
+        Leaf(Zed_string.append text1 text2, (len12 len1 len2, size1+size2))
+    | Node(d, len_l, rope_l, _, Leaf(text1, (len1,size1))), Leaf(text2, (len2,size2))
+      when len12 len1 len2 <= max_leaf_size ->
+      let ls= len12 len1 len2, size1+size2 in
+        Node(
+          d,
+          len_l,
+          rope_l,
+          ls,
+          Leaf(Zed_string.append text1 text2, ls))
+    | Leaf(text1, (len1,size1)), Node(d, _, Leaf(text2, (len2,size2)), len_r, rope_r)
+      when len12 len1 len2 <= max_leaf_size ->
+      let ls= len12 len1 len2, size1+size2 in
+        Node(
+          d,
+          ls,
+          Leaf(Zed_string.append text1 text2, ls),
+          len_r,
+          rope_r)
+    | _ ->
+      let rope1, rope2=
+        if length rope1 > 0 && length rope2 > 0 then
+          if Zed_char.is_combining_mark (Zed_char.core (get rope2 0)) then
+            let r2, hd= trim_hd rope2 in
+            let r1= append_cm rope1 hd in
+            r1, r2
+          else
+            rope1, rope2
+        else
+          rope1, rope2
+      in
+      balance (Node(
+        1 + max (depth rope1) (depth rope2),
+        (length rope1, size rope1), rope1,
+        (length rope2, size rope2), rope2))
+
+let concat sep l =
+  let rec loop acc = function
+    | [] -> acc
+    | x :: l -> loop (append (append acc sep) x) l
+  in
+  match l with
+    | [] -> empty ()
+    | x :: l -> loop x l
 
 let rec unsafe_sub rope idx len =
   match rope with
@@ -278,12 +322,17 @@ let insert_uChar rope pos ch =
   if UChar.code ch = 0 then
     rope
   else
-    match CharInfo_width.width ch with
-    | 0-> let glyph= get rope (pos-1) in
-      let glyph= Zed_char.append glyph ch in
-      replace rope (pos-1) 1 (Leaf (Zed_string.implode [glyph], (1, 1)))
-    | _-> let sub= (Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1))) in
+    if length rope = 0 then
+      let sub= Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1)) in
       insert rope pos sub
+    else
+      match CharInfo_width.width ch with
+      | 0-> let pos= if pos > 0 then pos - 1 else pos in
+        let glyph= get rope pos in
+        let glyph= Zed_char.append glyph ch in
+        replace rope pos 1 (Leaf (Zed_string.implode [glyph], (1, 1)))
+      | _-> let sub= (Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1))) in
+        insert rope pos sub
 
 let lchop = function
   | Leaf(_, (0,_)) -> empty ()

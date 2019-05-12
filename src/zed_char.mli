@@ -38,6 +38,9 @@ val prop_uChar : UChar.t -> char_prop
 val prop : t -> char_prop
   (** [prop ch] returns the char_prop of [ch] *)
 
+val is_printable : UChar.t -> bool
+  (** Returns whether a [UChar.t] is a printable character or not. *)
+
 val is_printable_core : UChar.t -> bool
   (** Returns whether a [UChar.t] is a printable character and its width is not zero. *)
 

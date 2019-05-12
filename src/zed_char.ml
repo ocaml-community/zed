@@ -13,11 +13,6 @@ open Result
 
 type t= Zed_utf8.t
 
-(*
-let to_raw t= t.core :: t.combined
-let to_array t= Array.of_list (t.core :: t.combined)
-*)
-
 type char_prop=
   | Printable of int
   | Other
@@ -41,6 +36,11 @@ let prop_uChar uChar=
   | w-> Printable w
 
 let prop t= prop_uChar (Zed_utf8.unsafe_extract t 0)
+
+let is_printable uChar=
+  match prop_uChar uChar with
+  | Printable _ -> true
+  | _-> false
 
 let is_printable_core uChar=
   match prop_uChar uChar with
