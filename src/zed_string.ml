@@ -237,6 +237,34 @@ module Zed_string0 = struct
     else
       []
 
+  let unsafe_explode str=
+    let str_len= String.length str in
+    let rec aux acc str ofs=
+      if ofs > 0 then
+        let chr, prev= extract_prev str ofs in
+        aux (chr::acc) str prev
+      else
+        acc
+    in
+    if str_len > 0 then
+      aux [] str str_len
+    else
+      []
+
+  let unsafe_rev_explode str=
+    let str_len= String.length str in
+    let rec aux acc ofs=
+      if ofs < str_len then
+        let chr, next= extract_next str ofs in
+        aux (chr::acc) next
+      else
+        []
+    in
+    if str_len > 0 then
+      aux [] 0
+    else
+      []
+
   let implode chars=
     String.concat "" (List.map Zed_char.to_utf8 chars)
 

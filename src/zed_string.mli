@@ -35,11 +35,17 @@ val of_utf8 : string -> t
 val to_utf8 : t -> string
   (** Create a utf8 encoded string from a Zed_string.t. *)
 
+val explode : t -> Zed_char.t list
+  (** [explode str] returns the list of all Zed_char.t of [str]. *)
+
 val rev_explode : t -> Zed_char.t list
   (** [explode str] returns the list of all Zed_char.t of [str] in reverse order. *)
 
-val explode : t -> Zed_char.t list
-  (** [explode str] returns the list of all Zed_char.t of [str]. *)
+val unsafe_explode : t -> Zed_char.t list
+  (** [explode str] returns the list of all Zed_char.t of [str] even if [str] is malformed. *)
+
+val unsafe_rev_explode : t -> Zed_char.t list
+  (** [explode str] returns the list of all Zed_char.t of [str] in reverse order even if [str] is malformed. *)
 
 val implode : Zed_char.t list -> t
   (** [implode l] returns the concatenation of all Zed_char.t of [l]. *)
