@@ -290,18 +290,29 @@ module String_buffer = Buffer
 
 module Buffer :
   sig
-    type t = {
-      mutable acc : rope;
-      mutable buf : Zed_string.Buf.buf;
-      mutable idx : int;
-    }
+    type t
+      (** Type of rope buffers. *)
+
     val create : unit -> t
+      (** Create a new empty buffer. *)
+
     val add : t -> Zed_char.t -> unit
+      (** [add buffer zChar] add [zChar] at the end of [buffer]. *)
+
     val add_uChar : t -> UChar.t -> unit
+      (** [add buffer uChar] add [uChar] at the end of [buffer]. *)
+
     val add_rope : t -> rope -> unit
+      (** [add buffer rope] add [rope] at the end of [buffer]. *)
+
     val add_string : t -> Zed_string.t -> unit
+      (** [add buffer str] add [str] at the end of [buffer]. *)
+
     val contents : t -> rope
+      (** [contents buffer] returns the contents of [buffer] as a rope. *)
+
     val reset : t -> unit
+      (** [reset buffer] resets [buffer] to its initial state. *)
   end
 val init : int -> (int -> Zed_char.t) -> rope
 val init_from_uChars : int -> (int -> UChar.t) -> rope

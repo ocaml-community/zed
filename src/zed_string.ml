@@ -263,9 +263,12 @@ module Zed_string0 = struct
     | _-> raise (Invalid_argument "Zed_string0.init_from_uChars")
 
 
+  let unsafe_of_uChars uChars=
+    match uChars with
+    | []-> ""
+    | _-> String.concat "" (List.map Zed_utf8.singleton uChars)
+
   let of_uChars uChars=
-    (*let zChars, uChars= Zed_char.zChars_of_uChars uChars in
-    implode zChars, uChars*)
     match uChars with
     | []-> "", []
     | fst::_->
@@ -392,8 +395,8 @@ module Zed_string0 = struct
   let append s1 s2=
     s1 ^ s2
 
-  let ends_with str ends=
-    Zed_utf8.ends_with str ends
+  let ends_with ~suffix str=
+    Zed_utf8.ends_with str suffix
 
   module Buf0 = struct
     type buf= Buffer.t

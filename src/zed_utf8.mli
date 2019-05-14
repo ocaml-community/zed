@@ -308,7 +308,7 @@ val extract : t -> int -> UChar.t
 
 val extract_next : t -> int -> UChar.t * int
   (** [extract_next str ofs] returns the code-point at offset [ofs] in
-      [str] and the offset the next character. *)
+      [str] and the offset of the next character. *)
 
 val extract_prev : t -> int -> UChar.t * int
   (** [extract_prev str ofs] returns the code-point at the previous
