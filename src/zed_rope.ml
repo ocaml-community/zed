@@ -253,7 +253,7 @@ let concat sep l =
 let rec unsafe_sub rope idx len =
   match rope with
     | Leaf(text, _) ->
-      let str= Zed_string.sub text idx len in
+      let str= Zed_string.sub ~pos:idx ~len text in
       let size= Zed_string.size str in
         Leaf(str, (len,size))
     | Node(_, (len_l,_), rope_l, (len_r,_), rope_r) ->
@@ -284,7 +284,7 @@ let make length char =
       if n = 0 then
         acc
       else if n < max_leaf_size then
-        let str= Zed_string.sub text 0 n in
+        let str= Zed_string.sub ~pos:0 ~len:n text in
         let size= Zed_string.size str in
         append acc (Leaf(str, (n, size)))
       else
@@ -674,11 +674,11 @@ module Zip = struct
     else
       let len' = length zip.zip.leaf - zip.pos in
       if len <= len' then
-        let str= Zed_string.sub zip.zip.str zip.pos len in
+        let str= Zed_string.sub ~pos:zip.pos ~len zip.zip.str in
         let size= Zed_string.size str in
         Leaf(str, (len,size))
       else
-        let str= Zed_string.sub zip.zip.str zip.pos (Zed_string.length zip.zip.str - zip.pos) in
+        let str= Zed_string.sub ~pos:zip.pos ~len:(Zed_string.length zip.zip.str - zip.pos) zip.zip.str in
         let size= Zed_string.size str in
         sub_rec (Leaf(str, (len',size))) zip.zip.rest_f (len - len')
 

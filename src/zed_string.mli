@@ -167,11 +167,11 @@ val move_raw : t -> index -> int -> index
 val compare_index : t -> index -> index -> int
   (**  [compare_index str i j] returns a positive integer if [i] is the location placed after [j] in [str], 0 if [i] and [j] point the same location, and a negative integer if [i] is the location placed before [j] in [str]. *)
 
-val sub_ofs : t -> index -> int -> t
-  (** [sub str idx len] returns the sub-string of [str] starting at offset [idx] and of length [len]. *)
+val sub_ofs : ofs:index -> len:int -> t -> t
+  (** [sub_ofs ofs len str] returns the sub-string of [str] starting at byte-offset [ofs] and of byte-length [len]. *)
 
-val sub : t -> int -> int -> t
-  (** [sub str pos len] returns the sub-string of [str] starting at position [pos] and of length [len]. *)
+val sub : pos:int -> len:int -> t -> t
+  (** [sub ~pos ~len str] returns the sub-string of [str] starting at position [pos] and of length [len]. *)
 
 val after : t -> int -> t
   (** [after str pos] returns the sub-string after [pos] in [str] *)

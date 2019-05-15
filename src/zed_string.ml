@@ -382,25 +382,24 @@ module Zed_string0 = struct
 
   let compare_index (_:t) i j= Pervasives.compare i j
 
-  let sub_ofs s ofs len =
+  let sub_ofs ~ofs ~len s=
     if ofs < 0 || len < 0 || ofs > bytes s - len then
       invalid_arg "Zed_string.sub"
     else
-      let ofs_end= move_l s ofs len in
-      String.sub s ofs (ofs_end - ofs)
+      String.sub s ofs len
 
-  let sub s idx len =
-    if idx < 0 || len < 0 || idx > length s - len then
+  let sub ~pos ~len s=
+    if pos < 0 || len < 0 || pos > length s - len then
       invalid_arg "Zed_string.sub"
     else
-      let ofs_start= move_l s 0 idx in
+      let ofs_start= move_l s 0 pos in
       let ofs_end= move_l s ofs_start len in
       String.sub s ofs_start (ofs_end - ofs_start)
 
   let after s i=
     let len= length s in
     if i < len then
-      sub s i (len-i)
+      sub ~pos:i ~len:(len-i) s
     else
       empty ()
 
