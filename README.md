@@ -33,3 +33,5 @@ Modules
 * `Zed_macro`: helpers for writing macro systems.
 * `Zed_utf8`: general purpose UTF-8 strings manipulation.
 * `Zed_rope`: general purpose unicode ropes manipulation.
+* `Zed_char`: general purpose unicode characters manipulation.
+* `Zed_string`: general purpose unicode strings manipulation.
