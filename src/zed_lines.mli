@@ -43,12 +43,6 @@ val width : ?tolerant:bool -> t -> int -> int -> (int, int) result
 val force_width : t -> int -> int -> int
   (** Returns the width of the given string. If error encounted, returns the width of the legit part *)
 
-val get_idx_left : line -> int -> int
-  (** Returns the idx of the character in the given column postion, count from the left. *)
-
-val get_idx_right : line -> int -> int
-  (** Returns the idx of the character in the given column postion, count from the right. *)
-
 val line_index : t -> int -> int
   (** [line_index set ofs] returns the line number of the line
       containing [ofs]. *)

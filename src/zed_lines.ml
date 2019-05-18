@@ -128,31 +128,6 @@ let force_width set idx len=
   else
     force_width set idx len
 
-let get_idx_left line column=
-  let rec forward idx column=
-    if line.width_info.(idx) > column then
-      idx
-    else
-      forward (idx+1) (column - line.width_info.(idx))
-  in
-  if column < line.width then
-    forward 0 column
-  else
-    raise Out_of_bounds
-
-let get_idx_right line column=
-  let rec backward idx column=
-    if line.width_info.(idx) >= column then
-      idx
-    else
-      backward (idx-1) (column - line.width_info.(idx))
-  in
-  if column <= line.width then
-    backward (line.length - 1) column
-  else
-    raise Out_of_bounds
-
-
 (* +-----------------------------------------------------------------+
    | Offset/line resolution                                          |
    +-----------------------------------------------------------------+ *)
