@@ -22,7 +22,7 @@
   * Zed\_rope.empty is a function now
   * Other functions in this module take `Zed_char.t` or `Zed_string.t` as arguemnts instead of `UChar.t` or `Zed_utf8.t`
   * module Zipper is divided into two modules, Zip and Zip\_raw, to navigate over a rope by Zed\_char.t or UChar.t, respectively
-  * module Text is divided into there modules, Text, Text\_core, Text\_raw, to manager Zed\_rope by Zed\char.t, the core UChar.t of a `Zed_char.t` and raw `UChar.t`, respectively
+  * module Text is divided into there modules, Text, Text\_core, Text\_raw, to manager Zed\_rope by Zed\_char.t, the core UChar.t of a `Zed_char.t` and raw `UChar.t`, respectively
 * Zed\_re is therefore divided into two modules: Core and Raw
 * Zed\_cursor: the type `changes` is defined as a structure and has two more fields: `added_width` and `removed_width`
 
