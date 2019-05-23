@@ -16,6 +16,8 @@ exception Out_of_bounds
   (** Exception raised when trying to access a character which is
       outside the bounds of a string. *)
 
+let pervasives_compare= compare
+
 let fail str pos msg = raise (Invalid(Printf.sprintf "at position %d: %s" pos msg, str))
 
 module Zed_string0 = struct
@@ -380,7 +382,7 @@ module Zed_string0 = struct
     if n >= 0 then move_l_raw t i n
     else move_b_raw t i n
 
-  let compare_index (_:t) i j= Pervasives.compare i j
+  let compare_index (_:t) i j= pervasives_compare i j
 
   let sub_ofs ~ofs ~len s=
     if ofs < 0 || len < 0 || ofs > bytes s - len then
