@@ -10,8 +10,6 @@
 
 (** Unicode ropes *)
 
-open CamomileLibrary
-
 type t
   (** Type of unicode ropes. *)
 
@@ -50,7 +48,7 @@ val is_empty : rope -> bool
 val get : rope -> int -> Zed_char.t
   (** [get rope idx] returns the glyph at index [idx] in [rope]. *)
 
-val get_raw : rope -> int -> UChar.t
+val get_raw : rope -> int -> Uchar.t
   (** [get_raw rope idx] returns the character at raw index [idx] in
       [rope]. *)
 
@@ -82,7 +80,7 @@ val insert : rope -> int -> rope -> rope
   (** [insert rope pos sub] inserts [sub] in [rope] at position
       [pos]. *)
 
-val insert_uChar : rope -> int -> UChar.t -> rope
+val insert_uChar : rope -> int -> Uchar.t -> rope
   (** [insert rope pos char] inserts [char] in [rope] at position
       [pos]. If [char] is a combing mark, it's merged to the character
       at position [pos-1] *)
@@ -245,13 +243,13 @@ module Zip_raw : sig
   val offset : t -> int
     (** Returns the raw position of the zipper in the rope. *)
 
-  val next : t -> UChar.t * t
+  val next : t -> Uchar.t * t
     (** [next zipper] returns the code point at the right of the
         zipper and a zipper to the next raw position. It raises
         [Out_of_bounds] if the zipper points to the end of the
         rope. *)
 
-  val prev : t -> UChar.t * t
+  val prev : t -> Uchar.t * t
     (** [prev zipper] returns the code point at the left of the
         zipper and a zipper to the previous raw position. It raises
         [Out_of_bounds] if the zipper points to the beginning of the
@@ -271,13 +269,13 @@ module Zip_raw : sig
     (** [at_eos zipper] returns [true] if [zipper] points to the
         end of the rope. *)
 
-  val find_f : (UChar.t -> bool) -> t -> t
+  val find_f : (Uchar.t -> bool) -> t -> t
     (** [find_f f zip] search forward for a character to satisfy
         [f]. It returns a zipper pointing to the left of the first
         character to satisfy [f], or a zipper pointing to the end of
         the rope if no such character exists. *)
 
-  val find_b : (UChar.t -> bool) -> t -> t
+  val find_b : (Uchar.t -> bool) -> t -> t
     (** [find_b f zip] search backward for a character to satisfy
         [f]. It returns a zipper pointing to the right of the first
         character to satisfy [f], or a zipper pointing to the
@@ -299,7 +297,7 @@ module Buffer :
     val add : t -> Zed_char.t -> unit
       (** [add buffer zChar] add [zChar] at the end of [buffer]. *)
 
-    val add_uChar : t -> UChar.t -> unit
+    val add_uChar : t -> Uchar.t -> unit
       (** [add buffer uChar] add [uChar] at the end of [buffer]. *)
 
     val add_rope : t -> rope -> unit
@@ -315,92 +313,9 @@ module Buffer :
       (** [reset buffer] resets [buffer] to its initial state. *)
   end
 val init : int -> (int -> Zed_char.t) -> rope
-val init_from_uChars : int -> (int -> UChar.t) -> rope
+val init_from_uChars : int -> (int -> Uchar.t) -> rope
 val of_string : Zed_string.t -> rope
 val to_string : rope -> Zed_string.t
 
-(** {5 Camomile compatible interface} *)
-
-module Text :
-  sig
-    type t = rope
-    val get : t -> int -> Zed_char.t
-    val init : int -> (int -> Zed_char.t) -> t
-    val length : t -> int
-    type index = Zip.t
-    val look : 'a -> index -> Zed_char.t
-    val nth : t -> int -> index
-    val next : 'a -> index -> index
-    val prev : 'a -> index -> index
-    val out_of_range : 'a -> index -> bool
-    val iter : (Zed_char.t -> unit) -> t -> unit
-    val compare : t -> t -> int
-    val first : t -> index
-    val last : t -> index
-    val move : 'a -> index -> int -> index
-    val compare_index : 'a -> index -> index -> int
-    module Buf :
-      sig
-        type buf = Buffer.t
-        val create : 'a -> buf
-        val contents : buf -> t
-        val clear : buf -> unit
-        val reset : buf -> unit
-        val add_char : buf -> UChar.t -> unit
-        val add_string : buf -> t -> unit
-        val add_buffer : buf -> buf -> unit
-      end
-  end
-
-module Text_core :
-  sig
-    type t = rope
-    val length : t -> int
-    type index = Zip.t
-    val nth : t -> int -> index
-    val next : 'a -> index -> index
-    val prev : 'a -> index -> index
-    val out_of_range : 'a -> index -> bool
-    val compare : t -> t -> int
-    val first : t -> index
-    val last : t -> index
-    val move : 'a -> index -> int -> index
-    val compare_index : 'a -> index -> index -> int
-    module Buf = Text.Buf
-    val get : t -> int -> UChar.t
-    val init : int -> (int -> UChar.t) -> t
-    val look : 'a -> index -> UChar.t
-    val iter : (UChar.t -> unit) -> t -> unit
-  end
-
-module Text_raw :
-  sig
-    type t = rope
-    type index = Zip_raw.t
-    val get : t -> int -> UChar.t
-    val init : int -> (int -> UChar.t) -> t
-    val length : t -> int
-    val look : 'a -> index -> UChar.t
-    val nth : t -> int -> index
-    val next : 'a -> index -> index
-    val prev : 'a -> index -> index
-    val out_of_range : 'a -> index -> bool
-    val iter : (UChar.t -> unit) -> t -> unit
-    val compare : t -> t -> int
-    val first : t -> index
-    val last : t -> index
-    val move : 'a -> index -> int -> index
-    val compare_index : 'a -> index -> index -> int
-    module Buf :
-      sig
-        type buf = Buffer.t
-        val create : 'a -> buf
-        val contents : buf -> t
-        val clear : buf -> unit
-        val reset : buf -> unit
-        val add_char : buf -> UChar.t -> unit
-        val add_string : buf -> t -> unit
-        val add_buffer : buf -> buf -> unit
-      end
-  end
-
+val lowercase : ?locale:string -> t -> t
+val uppercase : ?locale:string -> t -> t

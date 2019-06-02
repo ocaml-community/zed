@@ -9,7 +9,6 @@
 
 (** Edition engines *)
 
-open CamomileLibrary
 open React
 
 type 'a t
@@ -26,12 +25,6 @@ type clipboard = {
 
 val new_clipboard : unit -> clipboard
   (** [new_clipboard ()] creates a new clipboard using a reference. *)
-
-val regexp_word_core : Zed_re.Core.t
-  (** regexp to core-match a word a-z, A-Z, 0-9 *)
-
-val regexp_word_raw : Zed_re.Raw.t
-  (** regexp to raw-match a word a-z, A-Z, 0-9 *)
 
 val create :
   ?editable : (int -> int -> bool) ->
@@ -62,15 +55,6 @@ val create :
       [undo_size] is the size of the undo buffer. It is the number of
       state zed will remember. It defaults to [1000]. *)
 
-val match_by_regexp_core : Zed_re.Core.t -> Zed_rope.t -> int -> int option
-  (** [match_by_regexp_core re] creates a core-word-matching function using a
-      regular expression. *)
-
-val match_by_regexp_raw : Zed_re.Raw.t -> Zed_rope.t -> int -> int option
-  (** [match_by_regexp_raw re] creates a raw-word-matching function using a
-      regular expression. *)
-
-(** {5 State} *)
 
 val get_data : 'a t -> 'a
   (** [get_data edit] returns the custom data attached to the
@@ -219,8 +203,8 @@ val at_eot : 'a context -> bool
 val insert : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position. *)
 
-val insert_char : 'a context -> UChar.t -> unit
-  (** [insert ctx rope] inserts the given UChar at current position. *)
+val insert_char : 'a context -> Uchar.t -> unit
+  (** [insert ctx rope] inserts the given Uchar at current position. *)
 
 val insert_no_erase : 'a context -> Zed_rope.t -> unit
   (** [insert ctx rope] inserts the given rope at current position but

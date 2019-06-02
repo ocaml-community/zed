@@ -7,10 +7,7 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibraryDefault.Camomile
 open React
-
-module CaseMap = CaseMap.Make(Zed_rope.Text_core)
 
 (* +-----------------------------------------------------------------+
    | Types                                                           |
@@ -81,45 +78,13 @@ type 'a t = {
 
 let dummy_cursor = Zed_cursor.create 0 E.never (fun () -> Zed_lines.empty) 0 0
 
-let match_by_regexp_core re rope idx =
-  match Zed_re.Core.regexp_match ~sem:`Longest re rope idx with
-  | None ->
-    None
-  | Some arr ->
-    match arr.(0) with
-    | Some(_zip1, zip2) ->
-      Some(Zed_rope.Zip.offset zip2)
-    | None ->
-      None
-
-let match_by_regexp_raw re rope idx =
-  match Zed_re.Raw.regexp_match ~sem:`Longest re rope idx with
-  | None ->
-    None
-  | Some arr ->
-    match arr.(0) with
-    | Some(_zip1, zip2) ->
-      Some(Zed_rope.Zip_raw.offset zip2)
-    | None ->
-      None
-
-let regexp_word_core =
-  let set = UCharInfo.load_property_set `Alphabetic in
-  let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
-  Zed_re.Core.compile (`Repn(`Set set, 1, None))
-
-let regexp_word_raw =
-  let set = UCharInfo.load_property_set `Alphabetic in
-  let set = List.fold_left (fun set ch -> USet.add (UChar.of_char ch) set) set ['0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'] in
-  Zed_re.Raw.compile (`Repn(`Set set, 1, None))
-
 let new_clipboard () =
   let r = ref (Zed_rope.empty ()) in
   { clipboard_get = (fun () -> !r);
     clipboard_set = (fun x -> r := x) }
 
 
-let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = match_by_regexp_core regexp_word_core) ?(locale = S.const None) ?(undo_size = 1000) () =
+let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = fun _ _ -> None) ?(locale = S.const None) ?(undo_size = 1000) () =
   (* I'm not sure how to disable the unused warning with ocaml.warning and the
      argument can't be removed as it's part of the interface *)
   let _ = move in
@@ -581,8 +546,8 @@ let capitalize_word ctx =
             ctx
             (Zed_rope.length str)
             (Zed_rope.append
-               (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) ch)
-               (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str'))
+               (Zed_rope.uppercase ?locale:(S.value ctx.edit.locale) ch)
+               (Zed_rope.lowercase ?locale:(S.value ctx.edit.locale) str'))
         end
     | None ->
         ()
@@ -596,7 +561,7 @@ let lowercase_word ctx =
           replace
             ctx
             (Zed_rope.length str)
-            (CaseMap.lowercase ?locale:(S.value ctx.edit.locale) str)
+            (Zed_rope.lowercase ?locale:(S.value ctx.edit.locale) str)
         end
     | None ->
         ()
@@ -610,7 +575,7 @@ let uppercase_word ctx =
           replace
             ctx
             (Zed_rope.length str)
-            (CaseMap.uppercase ?locale:(S.value ctx.edit.locale) str)
+            (Zed_rope.uppercase ?locale:(S.value ctx.edit.locale) str)
         end
     | None ->
         ()
@@ -843,7 +808,7 @@ let parse_insert x =
   if Zed_utf8.starts_with x "insert(" && Zed_utf8.ends_with x ")" then begin
     let str = String.sub x 7 (String.length x - 8) in
     if String.length str = 1 && Char.code str.[0] < 128 then
-      Insert(Zed_char.unsafe_of_uChar (UChar.of_char str.[0]))
+      Insert(Zed_char.unsafe_of_uChar (Uchar.of_char str.[0]))
     else if String.length str > 2 && str.[0] = 'U' && str.[1] = '+' then
       let acc = ref 0 in
       for i = 2 to String.length str - 1 do
@@ -855,7 +820,7 @@ let parse_insert x =
                               | _ -> raise Not_found)
       done;
       try
-        Insert(Zed_char.unsafe_of_uChar (UChar.of_int !acc))
+        Insert(Zed_char.unsafe_of_uChar (Uchar.of_int !acc))
       with _ ->
         raise Not_found
     else
@@ -897,9 +862,9 @@ let name_of_action x =
   in
   match x with
     | Insert ch ->
-        let code = UChar.code (Zed_char.core ch) in
+        let code = Uchar.to_int (Zed_char.core ch) in
         if code <= 255 then
-          let ch = Char.chr (UChar.code (Zed_char.core ch)) in
+          let ch = Char.chr (Uchar.to_int (Zed_char.core ch)) in
           match ch with
             | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
                 Printf.sprintf "insert(%c)" ch
