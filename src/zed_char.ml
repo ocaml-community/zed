@@ -121,12 +121,16 @@ let rec subsequent uChars=
         uChar :: seq, remain
     | _-> [], uChars
 
-let of_uChars ?(trim=false) uChars=
+let of_uChars ?(trim=false) ?(indv_combining=true) uChars=
   match uChars with
   | []-> None, []
   | uChar::tl->
     match first_core ~trim uChars with
-    | None, _-> Some (Zed_utf8.singleton uChar), tl
+    | None, _->
+      if indv_combining then
+        Some (Zed_utf8.singleton uChar), tl
+      else
+        None, tl
     | Some (Printable _w, uChar), tl->
       let combined, tl= subsequent tl in
       Some (Zed_utf8.implode (uChar::combined)), tl
@@ -135,9 +139,9 @@ let of_uChars ?(trim=false) uChars=
     | Some (Other, uChar), tl->
       Some (Zed_utf8.singleton uChar) ,tl
 
-let zChars_of_uChars ?(trim=false) uChars=
+let zChars_of_uChars ?(trim=false) ?(indv_combining=true) uChars=
   let rec aux zChars uChars=
-    match of_uChars ~trim uChars with
+    match of_uChars ~trim ~indv_combining uChars with
     | None, tl-> List.rev zChars, tl
     | Some zChar, tl-> aux (zChar::zChars) tl
   in
@@ -148,8 +152,8 @@ let unsafe_of_utf8 : string -> t=
   fun str-> if String.length str > 0
     then str
     else failwith "malformed Zed_char sequence"
-let of_utf8 : string -> t= fun str->
-  match of_uChars (Zed_utf8.explode str) with
+let of_utf8 ?(indv_combining=true) str=
+  match of_uChars ~indv_combining (Zed_utf8.explode str) with
   | Some zChar, []-> zChar
   | _-> failwith "malformed Zed_char sequence"
 

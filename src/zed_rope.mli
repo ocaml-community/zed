@@ -22,7 +22,7 @@ exception Out_of_bounds
   (** Exception raised when trying to access a character which is
       outside the bounds of a rope. *)
 
-(** {6 Construction} *)
+(** {5 Construction} *)
 
 val empty : unit -> rope
   (** The empty rope. *)
@@ -33,7 +33,7 @@ val make : int -> Zed_char.t -> rope
 val singleton : Zed_char.t -> rope
   (** [singleton ch] creates a rope of length 1 containing only [ch]. *)
 
-(** {6 Informations} *)
+(** {5 Informations} *)
 
 val length : rope -> int
   (** Returns the length of the given rope. *)
@@ -45,7 +45,7 @@ val is_empty : rope -> bool
   (** [is_empty rope] returns whether [str] is the empty rope or not. *)
 
 
-(** {6 Random access} *)
+(** {5 Random access} *)
 
 val get : rope -> int -> Zed_char.t
   (** [get rope idx] returns the glyph at index [idx] in [rope]. *)
@@ -54,7 +54,7 @@ val get_raw : rope -> int -> UChar.t
   (** [get_raw rope idx] returns the character at raw index [idx] in
       [rope]. *)
 
-(** {6 Rope manipulation} *)
+(** {5 Rope manipulation} *)
 
 val append : rope -> rope -> rope
   (** Concatenates the two given ropes. *)
@@ -103,7 +103,7 @@ val rchop : rope -> rope
   (** [rchop rope] returns [rope] without is last character. Returns
       {!empty} if [rope] is empty. *)
 
-(** {6 Iteration, folding and mapping} *)
+(** {5 Iteration, folding and mapping} *)
 
 val iter : (Zed_char.t -> unit) -> rope -> unit
   (** [iter f rope] applies [f] on all characters of [rope] starting
@@ -128,7 +128,7 @@ val rev_map : (Zed_char.t -> Zed_char.t) -> rope -> rope
   (** [rev_map f str] maps all characters of [rope] with [f] in
       reverse order. *)
 
-(** {6 Iteration and folding on leafs} *)
+(** {5 Iteration and folding on leafs} *)
 
 (** Note: for all of the following functions, the leaves must
     absolutely not be modified. *)
@@ -156,7 +156,7 @@ val compare : rope -> rope -> int
 val equal : rope -> rope -> bool
   (** [equal r1 r2] retuns [true] if [r1] is equal to [r2]. *)
 
-(** {6 Zippers} *)
+(** {5 Zippers} *)
 
 module Zip : sig
   type t
@@ -284,7 +284,7 @@ module Zip_raw : sig
         beginning of the rope if no such character exists. *)
 end
 
-(** {6 Buffers} *)
+(** {5 Buffers} *)
 
 module String_buffer = Buffer
 
@@ -319,7 +319,7 @@ val init_from_uChars : int -> (int -> UChar.t) -> rope
 val of_string : Zed_string.t -> rope
 val to_string : rope -> Zed_string.t
 
-(** {6 Camomile compatible interface} *)
+(** {5 Camomile compatible interface} *)
 
 module Text :
   sig
