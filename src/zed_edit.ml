@@ -83,8 +83,29 @@ let new_clipboard () =
   { clipboard_get = (fun () -> !r);
     clipboard_set = (fun x -> r := x) }
 
+let default_match_word =
+  let rec loop_start segmenter zip =
+    match Zed_rope.Zip_raw.next zip with
+    | exception Zed_rope.Out_of_bounds -> None
+    | ch, zip ->
+      match Uuseg.add segmenter (`Uchar ch) with
+      | `Await          -> loop_start segmenter zip
+      | `Uchar _ | `End -> None
+      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
+  and loop_word segmenter zip v ~pos =
+    match Uuseg.add segmenter v with
+    | `Boundary | `End -> Some pos
+    | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
+    | `Await           ->
+      match Zed_rope.Zip_raw.next zip with
+      | exception Zed_rope.Out_of_bounds -> Some pos
+      | ch, zip -> loop_word segmenter zip (`Uchar ch) ~pos
+  in
+  fun rope idx ->
+    let zip = Zed_rope.Zip_raw.make_f rope idx in
+    loop_start (Uuseg.create `Word) zip
 
-let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = fun _ _ -> None) ?(locale = S.const None) ?(undo_size = 1000) () =
+let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = default_match_word) ?(locale = S.const None) ?(undo_size = 1000) () =
   (* I'm not sure how to disable the unused warning with ocaml.warning and the
      argument can't be removed as it's part of the interface *)
   let _ = move in
