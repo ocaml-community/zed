@@ -17,7 +17,7 @@ type t
   is expected: a printable UChar. For example, diacritics are added to
   IPA(international phonetic alphabet) letter to produce a modified
   pronunciation. Variation selectors are added to a CJK character to
-  specify a specific glyph variant for a the character.
+  specify a specific glyph variant for the character.
 
   Therefore the logical type definition of [Zed_char.t] can be seen as
   {[
@@ -44,7 +44,7 @@ val combined : t -> UChar.t list
   (** [combined char] returns the combining marks of the [char] *)
 
 val unsafe_of_utf8 : string -> t
-  (** [of_utf8 str] returns a [zed_char] from utf8 encoded [str] without any validation. *)
+  (** [unsafe_of_utf8 str] returns a [zed_char] from utf8 encoded [str] without any validation. *)
 
 val of_utf8 : ?indv_combining:bool -> string -> t
   (** [of_utf8 str] returns a [zed_char] from utf8 encoded [str].
@@ -108,7 +108,7 @@ val compare : t -> t -> int
   (** Alias of compare_raw *)
 
 val mix_uChar : t -> UChar.t -> (t, t) result
-  (** [mix_uChar ch uChar] tries to append [uChar] ch and returns
+  (** [mix_uChar chr uChar] tries to append [uChar] to [chr] and returns
     [Ok result]. If [uChar] is not a combining mark, then an
     [Error (Zed_char.t consists of uChar)] is returned. *)
 
