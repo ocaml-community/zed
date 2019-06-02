@@ -70,7 +70,7 @@ val match_by_regexp_raw : Zed_re.Raw.t -> Zed_rope.t -> int -> int option
   (** [match_by_regexp_raw re] creates a raw-word-matching function using a
       regular expression. *)
 
-(** {6 State} *)
+(** {5 State} *)
 
 val get_data : 'a t -> 'a
   (** [get_data edit] returns the custom data attached to the
@@ -132,14 +132,14 @@ val get_selection : 'a t -> bool
 val set_selection : 'a t -> bool -> unit
   (** [set_selection edit state] sets the selection state. *)
 
-(** {6 Cursors} *)
+(** {5 Cursors} *)
 
 val new_cursor : 'a t -> Zed_cursor.t
   (** [new_cursor edit] creates a new cursor for the given edition
       engine. The cursor initially points to the beginning of the
       buffer. *)
 
-(** {6 Actions} *)
+(** {5 Actions} *)
 
 exception Cannot_edit
   (** Exception raised when trying to edit a non-editable portion of a
@@ -365,7 +365,7 @@ val kill_prev_word : 'a context -> unit
 val undo : 'a context -> unit
   (** [undo ctx] reverts the last performed action. *)
 
-(** {6 Action by names} *)
+(** {5 Action by names} *)
 
 (** Type of actions. *)
 type action =

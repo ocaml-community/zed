@@ -23,7 +23,7 @@ exception Out_of_bounds
   (** Exception raised when trying to access a character which is
       outside the bounds of a string. *)
 
-(** {6 Validation} *)
+(** {5 Validation} *)
 
 (** Result of cheking a string for correct UTF-8. *)
 type check_result =
@@ -50,7 +50,7 @@ val next_error : t -> int -> int * int * string
       error message. If there is no error until the end of string then
       [ofs] is [String.length str] and [msg] is the empty string. *)
 
-(** {6 Construction} *)
+(** {5 Construction} *)
 
 val singleton : UChar.t -> t
   (** [singleton ch] creates a string of length 1 containing only the
@@ -67,23 +67,23 @@ val rev_init : int -> (int -> UChar.t) -> t
   (** [rev_init n f] returns the contenation of [singleton (f (n -
       1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
 
-(** {6 Informations} *)
+(** {5 Informations} *)
 
 val length : t -> int
   (** Returns the length of the given string. *)
 
-(** {6 Comparison} *)
+(** {5 Comparison} *)
 
 val compare : t -> t -> int
   (** Compares two strings (in code point order). *)
 
-(** {6 Random access} *)
+(** {5 Random access} *)
 
 val get : t -> int -> UChar.t
   (** [get str idx] returns the character at index [idx] in
       [str]. *)
 
-(** {6 String manipulation} *)
+(** {5 String manipulation} *)
 
 val sub : t -> int -> int -> t
   (** [sub str ofs len] Returns the sub-string of [str] starting at
@@ -112,7 +112,7 @@ val replace : t -> int -> int -> t -> t
   (** [replace str pos len repl] replaces the [len] characters at
       position [pos] in [str] by [repl]. *)
 
-(** {6 Tranformation} *)
+(** {5 Tranformation} *)
 
 val rev : t -> t
   (** [rev str] reverses all characters of [str]. *)
@@ -139,7 +139,7 @@ val rev_implode : UChar.t list -> t
   (** [rev_implode l] is the same as [implode (List.rev l)] but more
       efficient. *)
 
-(** {6 Text traversals} *)
+(** {5 Text traversals} *)
 
 val iter : (UChar.t -> unit) -> t -> unit
   (** [iter f str] applies [f] an all characters of [str] starting
@@ -195,7 +195,7 @@ val rev_filter_map_concat : (UChar.t -> t option) -> t -> t
   (** [rev_filter_map f str] filters and maps characters of [str] with
       [f] in reverse order and concatenate the result. *)
 
-(** {6 Scanning} *)
+(** {5 Scanning} *)
 
 val for_all : (UChar.t -> bool) -> t -> bool
   (** [for_all f text] returns whether all characters of [text] verify
@@ -209,7 +209,7 @@ val count : (UChar.t -> bool) -> t -> int
   (** [count f text] returhs the number of characters of [text]
       verifying [f]. *)
 
-(** {6 Tests} *)
+(** {5 Tests} *)
 
 val contains : t -> t -> bool
   (** [contains text sub] returns whether [sub] appears in [text] *)
@@ -222,7 +222,7 @@ val ends_with : t -> t -> bool
   (** [ends_with text suffix] returns [true] iff [s] ends with
       [suffix]. *)
 
-(** {6 Stripping} *)
+(** {5 Stripping} *)
 
 val strip : ?predicate : (UChar.t -> bool) -> t -> t
   (** [strip ?predicate text] returns [text] without its firsts and
@@ -251,13 +251,13 @@ val rchop : t -> t
   (** [rchop t] returns [t] without is last character. Returns [""] if
       [t = ""]. *)
 
-(** {6 Buffers} *)
+(** {5 Buffers} *)
 
 val add : Buffer.t -> UChar.t -> unit
   (** [add buf ch] is the same as [Buffer.add_string buf (singleton
       ch)] but is more efficient. *)
 
-(** {6 Escaping} *)
+(** {5 Escaping} *)
 
 val escaped_char : UChar.t -> t
   (** [escaped_char ch] returns a string containg [ch] or an escaped
@@ -292,7 +292,7 @@ val add_escaped_string : Buffer.t -> CamomileLibraryDefault.Camomile.CharEncodin
       [Buffer.add_string buf (escaped_string enc text)] but a bit more
       efficient. *)
 
-(** {6 Safe offset API} *)
+(** {5 Safe offset API} *)
 
 val next : t -> int -> int
   (** [next str ofs] returns the offset of the next character in
@@ -314,7 +314,7 @@ val extract_prev : t -> int -> UChar.t * int
   (** [extract_prev str ofs] returns the code-point at the previous
       offset in [str] and this offset. *)
 
-(** {6 Unsafe offset API} *)
+(** {5 Unsafe offset API} *)
 
 (** These functions does not check that the given offset is inside the
     bounds of the given string. *)

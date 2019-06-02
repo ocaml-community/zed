@@ -89,7 +89,7 @@ val width : ?start:int -> ?num:int -> t -> width
 (** [width ?start ?num str] returns the [width] of a Zed_string.t that starts at positon [start] and has length less than [num]. *)
 
 val bytes : t -> index
-  (** [bytes str] returns the number of [str]. It's also the index point to the end of [str]. *)
+  (** [bytes str] returns the number of bytes in [str]. It's also the index point to the end of [str]. *)
 
 val size : t -> int
   (** [size str] returns the number of UChar.t in [str]. *)
