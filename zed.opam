@@ -8,9 +8,10 @@ license: "BSD3"
 depends: [
   "dune" {build & >= "1.0.0"}
   "base-bytes"
-  "camomile" {>= "1.0.1"}
+  "uucd"
+  "uutf"
+  "uuseg"
   "react"
-  "charInfo_width" {>= "1.1.0" & < "2.0~"}
 ]
 build: [
   ["dune" "subst"] {pinned}
