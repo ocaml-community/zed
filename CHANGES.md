@@ -1,3 +1,9 @@
+2.0.1 (2019-06-04)
+------------------
+
+* Zed\_char: add options of combining marks for transform functions (#18)
+* Zed\_char: clarify some documentation comments (#18)
+
 2.0 (2019-05-17)
 ----------------
 
