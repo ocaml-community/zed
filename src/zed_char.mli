@@ -141,7 +141,7 @@ val iter : (UChar.t -> unit) -> t -> unit
   the two functions do not check if [char] or [uChar] being transformed
   is a valid grapheme. There is no 'safe_' version, because the scenario
   we should deal with a single [char] or [uChar] is when the char
-  sequence are individual, incompelte. For example, when we are reading
+  sequence are individual, incomplete. For example, when we are reading
   user input. Even if a user wants to input a legal grapheme, say,
   'a' with a hat(a combining mark) on top. the user will input 'a' and
   then '^' individually, the later combining mark is always illegal.
