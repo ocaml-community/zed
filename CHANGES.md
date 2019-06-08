@@ -1,7 +1,9 @@
 2.0.1 (2019-06-04)
 ------------------
 
-* Zed\_char: add an `indv_combining` option to the transforming functions(`of_uChars, zChars_of_uChars, of_utf8`) to determine whether extract individual combining marks from the parameter (#18)
+* Zed\_char: add an `indv_combining` option to the transforming
+  functions(`of_uChars, zChars_of_uChars, of_utf8`) to determine whether
+  to extract individual combining marks from the parameter (#18)
 * Zed\_char: clarify some documentation comments (#18)
 
 2.0 (2019-05-17)
