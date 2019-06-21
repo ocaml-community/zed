@@ -1,3 +1,8 @@
+2.0.2 (2019-06-21)
+------------------
+
+* Zed\_utf8: fix an ofs-stepping bug in function `unsafe_extract_prev`
+
 2.0.1 (2019-06-04)
 ------------------
 
@@ -12,8 +17,7 @@
 ### Additions
 
 * module Zed\_char
-* module Zed\_string
-* Zed\_cursor
+* module Zed\_string * Zed\_cursor
   * `column_display: Zed_cursor.t -> int React.signal`
   * `get_column: Zed_cursor.t -> int`
   * `coordinates_display: Zed_cursor.t -> (int * int) React.signal`
