@@ -265,11 +265,7 @@ module Zed_string0 = struct
         acc
     in
     if str_len > 0 then
-      let uChar= Zed_utf8.unsafe_extract str 0 in
-      if Zed_char.is_combining_mark uChar then
-        fail str 0 "invalid start of Zed_char sequence"
-      else
-        aux [] str str_len
+      aux [] str str_len
     else
       []
 
@@ -283,11 +279,7 @@ module Zed_string0 = struct
         []
     in
     if str_len > 0 then
-      let uChar= Zed_utf8.unsafe_extract str 0 in
-      if Zed_char.is_combining_mark uChar then
-        fail str 0 "invalid start of Zed_char sequence"
-      else
-        aux [] 0
+      aux [] 0
     else
       []
 
