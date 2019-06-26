@@ -333,18 +333,21 @@ let insert ctx rope =
     raise Cannot_edit
 
 let insert_char ctx ch =
-  match Zed_char.prop_uChar ch with
-  | Printable 0->
-    let position = Zed_cursor.get_position ctx.cursor in
-    if not ctx.check || ctx.edit.editable position 0 then begin
+  if Zed_char.is_combining_mark ch then
+    let position = Zed_cursor.get_position ctx.cursor
+    and column= Zed_cursor.get_column ctx.cursor in
+    if column <= 0 then ()
+    else if not ctx.check || ctx.edit.editable position 0 then begin
       let text = ctx.edit.text and lines = ctx.edit.lines in
-      ctx.edit.text <- Zed_rope.insert_uChar ctx.edit.text position ch;
-      modify ctx text lines position position 1 1 0 0;
-      move ctx 0;
-      next_line_n ctx 0;
+      try
+        ctx.edit.text <- Zed_rope.insert_uChar ctx.edit.text position ch;
+        modify ctx text lines position position 1 1 0 0;
+        move ctx 0;
+        next_line_n ctx 0;
+      with _-> ()
     end else
       raise Cannot_edit
-  | _-> insert ctx (Zed_rope.of_string (fst (Zed_string.of_uChars [ch])))
+  else insert ctx (Zed_rope.of_string (fst (Zed_string.of_uChars [ch])))
 
 let insert_no_erase ctx rope =
   let position = Zed_cursor.get_position ctx.cursor in
