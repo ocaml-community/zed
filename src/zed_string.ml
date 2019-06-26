@@ -139,13 +139,16 @@ module Zed_string0 = struct
       if Zed_char.is_combining_mark chr then
         let prev= skip str prev in
         if prev = 0 then
-          fail str 0 "malformed Zed_char sequence"
+          if Zed_char.is_printable_core (Zed_utf8.unsafe_extract str 0) then
+            prev
+          else
+            fail str 0 "individual combining marks encountered"
         else
           let chr, next= Zed_utf8.unsafe_extract_next str prev in
           match Zed_char.prop_uChar chr with
           | Printable 0
           | Other
-          | Null -> fail str next "malformed Zed_char sequence"
+          | Null -> fail str next "individual combining marks encountered"
           | _-> prev
       else
         prev
@@ -356,7 +359,7 @@ module Zed_string0 = struct
   let of_utf8 : string -> t= fun str->
     if String.length str = 0 then ""
     else if Zed_char.is_combining_mark (Zed_utf8.extract str 0) then
-      fail str 0 "malformed Zed_char sequence"
+      fail str 0 "individual combining marks encountered"
     else
       unsafe_of_utf8 str
   let to_utf8 : t -> string= id
