@@ -334,10 +334,8 @@ let insert ctx rope =
 
 let insert_char ctx ch =
   if Zed_char.is_combining_mark ch then
-    let position = Zed_cursor.get_position ctx.cursor
-    and column= Zed_cursor.get_column ctx.cursor in
-    if column <= 0 then ()
-    else if not ctx.check || ctx.edit.editable position 0 then begin
+    let position = Zed_cursor.get_position ctx.cursor in
+    if not ctx.check || ctx.edit.editable position 0 then begin
       let text = ctx.edit.text and lines = ctx.edit.lines in
       try
         ctx.edit.text <- Zed_rope.insert_uChar ctx.edit.text position ch;

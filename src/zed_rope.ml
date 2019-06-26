@@ -322,19 +322,22 @@ let insert_uChar rope pos ch =
   if UChar.code ch = 0 then
     rope
   else
-    if length rope = 0 then
-      let sub= Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1)) in
-      insert rope pos sub
-    else if Zed_char.is_combining_mark ch then
-      let pos= if pos > 0 then pos - 1 else pos in
-      let glyph= get rope pos in
-      if Zed_char.is_printable_core (Zed_char.core glyph) then
-        let glyph= Zed_char.append glyph ch in
-        replace rope pos 1 (Leaf (Zed_string.implode [glyph], (1, 1)))
-      else
+    if Zed_char.is_combining_mark ch then
+      if length rope = 0 then
         failwith "inserting an individual combining mark"
+      else
+        if pos = 0 then
+          failwith "inserting an individual combining mark"
+        else
+          let pos= if pos > 0 then pos - 1 else pos in
+          let glyph= get rope pos in
+          if Zed_char.is_printable_core (Zed_char.core glyph) then
+            let glyph= Zed_char.append glyph ch in
+            replace rope pos 1 (Leaf (Zed_string.implode [glyph], (1, 1)))
+          else
+            failwith "inserting an individual combining mark"
     else
-      let sub= (Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1))) in
+      let sub= Leaf (Zed_string.implode [Zed_char.unsafe_of_uChar ch], (1, 1)) in
       insert rope pos sub
 
 let lchop = function
