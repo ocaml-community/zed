@@ -10,6 +10,11 @@
 open CamomileLibrary
 open Result
 
+exception Invalid of string * string
+  (** [Invalid (error, text)] Exception raised when an invalid Zed_char
+      sequence is encountered. [text] is the faulty text and
+      [error] is a description of the first error in [text]. *)
+
 exception Out_of_bounds
   (** Exception raised when trying to access a character which is
       outside the bounds of a string. *)
@@ -30,7 +35,10 @@ val unsafe_of_utf8 : string -> t
   (** Create a Zed_string.t from a utf8 encoded string. *)
 
 val of_utf8 : string -> t
-  (** Create a Zed_string.t from a utf8 encoded string and check whether it's well formed. *)
+  (** Create a Zed_string.t from a utf8 encoded string and check whether it's well formed.
+    @raise Invalid
+    @raise Zed_utf8.Invalid
+   *)
 
 val to_utf8 : t -> string
   (** Create a utf8 encoded string from a Zed_string.t. *)

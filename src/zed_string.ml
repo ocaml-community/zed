@@ -312,7 +312,7 @@ module Zed_string0 = struct
   let of_utf8 : string -> t= fun str->
     if String.length str = 0 then ""
     else if Zed_char.is_combining_mark (Zed_utf8.extract str 0) then
-      failwith "malformed Zed_char sequence"
+      fail str 0 "invalid start of Zed_char sequence"
     else
       unsafe_of_utf8 str
   let to_utf8 : t -> string= id
