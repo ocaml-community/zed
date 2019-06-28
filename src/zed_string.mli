@@ -200,8 +200,14 @@ val starts_with : prefix:t -> t -> bool
 val ends_with : suffix:t -> t -> bool
   (** [ends_with ~suffix str] returns [true] if [str] ends with [suffix]. *)
 
+val unsafe_append : t -> t -> t
+  (** [unsafe_append str1 str2] returns the concatenation of [str1] and [str2] without sequence validation. *)
+
 val append : t -> t -> t
-  (** [append str1 str2] returns the concatenation of [str1] and [str2]. *)
+  (** [append str1 str2] returns the concatenation of [str1] and [str2].
+    @raise Invalid
+    @raise Zed_utf8.Invalid
+   *)
 
 module US :
   functor (US : UnicodeString.Type) ->
