@@ -105,6 +105,12 @@ val size : t -> int
 val length : t -> int
   (** [length str] returns the number of Zed_char.t in [str] *)
 
+val next_ofs : t -> int -> int
+  (** [next_ofs str ofs] returns the offset of the next zed_char in [str]. *)
+
+val prev_ofs : t -> int -> int
+  (** [prev_ofs str ofs] returns the offset of the previous zed_char in [str]. *)
+
 val extract : t -> index -> Zed_char.t
   (** [extract str ofs] returns the Zed_char.t at offset [ofs] in [str]. *)
 
@@ -154,7 +160,10 @@ val nth : t -> int -> index
 (**  [next str i], [prev str i] The operation is valid if [i] points the valid element, i.e. the returned value may point the location beyond valid elements by one. If i does not point a valid element, the results are unspecified. *)
 
 val next : t -> index -> index
+  (** [next str idx] returns the index of the next zed_char in [str]. *)
+
 val prev : t -> index -> index
+  (** [prev str idx] returns the index of the previous zed_char in [str]. *)
 
 val out_of_range : t -> index -> bool
 val compare : t -> t -> int
