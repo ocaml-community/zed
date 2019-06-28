@@ -68,7 +68,7 @@ module Zed_string0 = struct
       else
         next
 
-  let next str ofs=
+  let next_ofs str ofs=
     let str_len= String.length str in
     let rec skip str ofs=
       if ofs >= str_len then
@@ -121,7 +121,7 @@ module Zed_string0 = struct
       else
         prev
 
-  let prev str ofs=
+  let prev_ofs str ofs=
     let rec skip str ofs=
       if ofs = 0 then
         ofs
@@ -198,15 +198,15 @@ module Zed_string0 = struct
       move str ofs len
 
   let extract str ofs=
-    let next= next str ofs in
+    let next= next_ofs str ofs in
     Zed_char.unsafe_of_utf8 (String.sub str ofs (next - ofs))
 
   let extract_next str ofs=
-    let next= next str ofs in
+    let next= next_ofs str ofs in
     (Zed_char.unsafe_of_utf8 (String.sub str ofs (next - ofs)), next)
 
   let extract_prev str ofs=
-    let prev= prev str ofs in
+    let prev= prev_ofs str ofs in
     (Zed_char.unsafe_of_utf8 (String.sub str prev (ofs - prev)), prev)
 
   let to_raw_list str= Zed_utf8.explode str
