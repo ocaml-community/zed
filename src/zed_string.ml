@@ -354,6 +354,28 @@ module Zed_string0 = struct
       else
         (uChars |> List.map Zed_utf8.singleton |> String.concat "", [])
 
+  let unsafe_append s1 s2=
+    s1 ^ s2
+
+  let append s1 s2=
+    let validate_s2 ()=
+      let s2_first= Zed_utf8.unsafe_extract s2 0 in
+      if Zed_char.is_combining_mark s2_first then
+        fail s2 0 "individual combining marks encountered"
+      else
+        s2
+    in
+    if s1 = "" then
+      validate_s2 ()
+    else if s2 = "" then
+      s1
+    else
+      let (s1_last, _)= extract_prev s1 (bytes s1) in
+      if Zed_char.(is_printable_core (core s1_last)) then
+        unsafe_append s1 s2
+      else
+        unsafe_append s1 (validate_s2 ())
+
   external id : 'a -> 'a = "%identity"
   let unsafe_of_utf8 : string -> t= id
   let of_utf8 : string -> t= fun str->
@@ -467,9 +489,6 @@ module Zed_string0 = struct
 
   let make len c=
     implode (Array.to_list (Array.make len c))
-
-  let append s1 s2=
-    s1 ^ s2
 
   let ends_with ~suffix str=
     Zed_utf8.ends_with str suffix
