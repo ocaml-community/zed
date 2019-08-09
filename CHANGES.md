@@ -1,3 +1,11 @@
+2.0.3 (2019-08-09)
+------------------
+
+* Zed\_string
+  * `exception Invalid of string * string` raised when an invalid Zed\_char sequence is encounted
+  * `next_ofs : t -> int -> int` returns the offset of the next zchar in `t`
+  * `prev_ofs : t -> int -> int` returns the offset of the prev zchar in `t`
+
 2.0.2 (2019-06-21)
 ------------------
 
