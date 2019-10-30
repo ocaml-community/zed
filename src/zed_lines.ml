@@ -325,3 +325,21 @@ let of_rope rope =
   in
   loop0 (Zed_rope.Zip.make_f rope 0) empty
 
+(* +-----------------------------------------------------------------+
+   | Index and width                                                 |
+   +-----------------------------------------------------------------+ *)
+
+let get_idx_by_width set row column=
+  let start= line_start set row in
+  let stop= line_stop set row in
+  let rec get idx acc_width=
+    if acc_width >= column || idx >= stop then
+      idx
+    else
+      let curr_width= force_width set idx 1 in
+      if acc_width + curr_width > column
+      then idx (* the width of the current char covers the column *)
+      else get (idx+1) (acc_width + curr_width)
+  in
+  get start 0
+
