@@ -232,14 +232,18 @@ let next_line_n ctx n =
   if index + n > Zed_lines.count ctx.edit.lines then
     goto ctx ~set_wanted_column:false (Zed_rope.length ctx.edit.text)
   else begin
-    let start = Zed_lines.line_start ctx.edit.lines (index + n) in
     let stop =
       if index + n = Zed_lines.count ctx.edit.lines then
         Zed_rope.length ctx.edit.text
       else
         Zed_lines.line_start ctx.edit.lines (index + n + 1) - 1
     in
-    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+    let wanted_idx= Zed_lines.get_idx_by_width
+        ctx.edit.lines
+        (index + n)
+        (Zed_cursor.get_wanted_column ctx.cursor)
+    in
+    goto ctx ~set_wanted_column:false (min wanted_idx stop)
   end
 
 let prev_line_n ctx n =
@@ -247,9 +251,13 @@ let prev_line_n ctx n =
   if index - n < 0 then begin
     goto ctx ~set_wanted_column:false 0
   end else begin
-    let start = Zed_lines.line_start ctx.edit.lines (index - n) in
     let stop = Zed_lines.line_start ctx.edit.lines (index - (n - 1)) - 1 in
-    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+    let wanted_idx= Zed_lines.get_idx_by_width
+        ctx.edit.lines
+        (index - n)
+        (Zed_cursor.get_wanted_column ctx.cursor)
+    in
+    goto ctx ~set_wanted_column:false (min wanted_idx stop)
   end
 
 let move_line ctx delta =
@@ -418,14 +426,18 @@ let next_line ctx =
   if index = Zed_lines.count ctx.edit.lines then
     goto ctx ~set_wanted_column:false (Zed_rope.length ctx.edit.text)
   else begin
-    let start = Zed_lines.line_start ctx.edit.lines (index + 1) in
     let stop =
       if index + 1 = Zed_lines.count ctx.edit.lines then
         Zed_rope.length ctx.edit.text
       else
         Zed_lines.line_start ctx.edit.lines (index + 2) - 1
     in
-    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+    let wanted_idx= Zed_lines.get_idx_by_width
+        ctx.edit.lines
+        (index + 1)
+        (Zed_cursor.get_wanted_column ctx.cursor)
+    in
+    goto ctx ~set_wanted_column:false (min wanted_idx stop)
   end
 
 let prev_line ctx =
@@ -433,9 +445,13 @@ let prev_line ctx =
   if index = 0 then begin
     goto ctx ~set_wanted_column:false 0
   end else begin
-    let start = Zed_lines.line_start ctx.edit.lines (index - 1) in
     let stop = Zed_lines.line_start ctx.edit.lines index - 1 in
-    goto ctx ~set_wanted_column:false (start + min (Zed_cursor.get_wanted_column ctx.cursor) (stop - start))
+    let wanted_idx= Zed_lines.get_idx_by_width
+        ctx.edit.lines
+        (index - 1)
+        (Zed_cursor.get_wanted_column ctx.cursor)
+    in
+    goto ctx ~set_wanted_column:false (min wanted_idx stop)
   end
 
 let goto_bol ctx =
