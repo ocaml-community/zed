@@ -75,6 +75,6 @@ val replace : t -> int -> int -> t -> t
       [offset] and length [length] by [repl] in [set]. *)
 
 val get_idx_by_width : t -> int -> int -> int
-  (** [get_idx_by_width set column_width] return the offset of the char at
-      given column_width. *)
+  (** [get_idx_by_width set row column_width] return the offset of the char
+      at \[row, column_width\]. *)
 
