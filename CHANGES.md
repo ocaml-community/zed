@@ -1,3 +1,9 @@
+2.0.4 (2019-12-31)
+------------------
+
+* add wanted\_column support for wide width character
+* Zed\_lines: `get_idx_by_width set row column_width` return the offset of the character at `[row, column_width]`
+
 2.0.3 (2019-08-09)
 ------------------
 
