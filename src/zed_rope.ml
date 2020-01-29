@@ -503,7 +503,7 @@ module Zip = struct
     zip : rope_zipper;
   }
 
-  let rec make_f_rec ofs rope pos rest_b rest_f =
+  let rec make_rec ofs rope pos rest_b rest_f =
     match rope with
     | Leaf(str, _) ->
       { idx= Zed_string.move str 0 pos;
@@ -512,32 +512,19 @@ module Zip = struct
     | Node(_, _, r1, _, r2) ->
       let len1 = length r1 in
       if pos < len1 then
-        make_f_rec ofs r1 pos rest_b (r2 :: rest_f)
+        make_rec ofs r1 pos rest_b (r2 :: rest_f)
       else
-        make_f_rec ofs r2 (pos - len1) (r1 :: rest_b) rest_f
+        make_rec ofs r2 (pos - len1) (r1 :: rest_b) rest_f
 
   let make_f rope pos =
     if pos < 0 || pos > length rope then raise Out_of_bounds;
-    make_f_rec pos rope pos [] []
-
-  let rec make_b_rec ofs rope pos rest_b rest_f =
-    match rope with
-    | Leaf(str, (len,_)) ->
-      { idx= Zed_string.move str (Zed_string.bytes str) (- (len - pos));
-        pos = pos;
-        zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }
-    | Node(_, _, r1, _, r2) ->
-      let len1 = length r1 in
-      if pos < len1 then
-        make_b_rec ofs r1 pos rest_b (r2 :: rest_f)
-      else
-        make_b_rec ofs r2 (pos - len1) (r1 :: rest_b) rest_f
+    make_rec pos rope pos [] []
 
   let make_b rope pos =
     let len = length rope in
     if pos < 0 || pos > len then raise Out_of_bounds;
     let pos = len - pos in
-    make_b_rec pos rope pos [] []
+    make_rec pos rope pos [] []
 
   let offset zip =
     zip.zip.ofs + zip.pos
