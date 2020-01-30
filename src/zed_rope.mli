@@ -170,7 +170,7 @@ module Zip : sig
         [pos] of [rope]. *)
 
   val make_b : rope -> int -> t
-    (** [make_f rope pos] creates a new zipper pointing to positon
+    (** [make_b rope pos] creates a new zipper pointing to positon
         [length rope - pos] of [rope]. *)
 
   val offset : t -> int
@@ -239,7 +239,7 @@ module Zip_raw : sig
         [pos] of [rope]. *)
 
   val make_b : rope -> int -> t
-    (** [make_f rope pos] creates a new zipper pointing to raw positon
+    (** [make_b rope pos] creates a new zipper pointing to raw positon
         [length rope - pos] of [rope]. *)
 
   val offset : t -> int
