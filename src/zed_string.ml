@@ -7,6 +7,10 @@
  * This file is a part of Zed, an editor engine.
  *)
 
+(* This aliasing needs to come before 'open Result' which now offers a
+   'compare' function. We don't use 'Pervasives.compare' or 'Stdlib.compare'
+   because neither seems to work with every version of OCaml. *)
+let pervasives_compare= compare
 
 open CamomileLibraryDefault.Camomile
 open Result
@@ -15,8 +19,6 @@ exception Invalid of string * string
 exception Out_of_bounds
   (** Exception raised when trying to access a character which is
       outside the bounds of a string. *)
-
-let pervasives_compare= compare
 
 let fail str pos msg = raise (Invalid(Printf.sprintf "at position %d: %s" pos msg, str))
 
