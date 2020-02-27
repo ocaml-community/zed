@@ -597,7 +597,7 @@ module US_Raw = struct
 
   let move= Zed_string0.move_raw
 
-  let compare_index _str= compare
+  let compare_index _str= pervasives_compare
 
   let iter f str= List.iter f (Zed_utf8.explode str)
 
