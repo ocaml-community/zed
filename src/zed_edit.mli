@@ -379,6 +379,10 @@ type action =
   | Goto_eol
   | Goto_bot
   | Goto_eot
+  | Delete_next_chars of int
+  | Delete_prev_chars of int
+  | Kill_next_chars of int
+  | Kill_prev_chars of int
   | Delete_next_char
   | Delete_prev_char
   | Delete_next_line
