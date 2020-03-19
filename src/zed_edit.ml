@@ -470,6 +470,34 @@ let goto_bot ctx =
 let goto_eot ctx =
   goto ctx (Zed_rope.length ctx.edit.text)
 
+let delete_next_chars ctx n=
+  if not (at_eot ctx) then begin
+    ctx.edit.set_selection false;
+    remove_next ctx n;
+  end
+
+let delete_prev_chars ctx n=
+  if not (at_bot ctx) then begin
+    ctx.edit.set_selection false;
+    remove_prev ctx n;
+  end
+
+let kill_next_chars ctx n=
+  let position = Zed_cursor.get_position ctx.cursor in
+  let end_pos= min (position + n) (Zed_rope.length ctx.edit.text) in
+  let n= end_pos - position in
+  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text position n);
+  ctx.edit.set_selection false;
+  remove ctx n
+
+let kill_prev_chars ctx n=
+  let position = Zed_cursor.get_position ctx.cursor in
+  let start= max 0 (position - n) in
+  let n= position - start in
+  ctx.edit.clipboard.clipboard_set (Zed_rope.sub ctx.edit.text start n);
+  ctx.edit.set_selection false;
+  remove_prev ctx n
+
 let delete_next_char ctx =
   if not (at_eot ctx) then begin
     ctx.edit.set_selection false;
@@ -725,6 +753,10 @@ type action =
   | Goto_eol
   | Goto_bot
   | Goto_eot
+  | Delete_next_chars of int
+  | Delete_prev_chars of int
+  | Kill_next_chars of int
+  | Kill_prev_chars of int
   | Delete_next_char
   | Delete_prev_char
   | Delete_next_line
@@ -762,6 +794,10 @@ let get_action = function
   | Goto_eol -> goto_eol
   | Goto_bot -> goto_bot
   | Goto_eot -> goto_eot
+  | Delete_next_chars n-> (fun ctx-> delete_next_chars ctx n)
+  | Delete_prev_chars n-> (fun ctx-> delete_prev_chars ctx n)
+  | Kill_next_chars n-> (fun ctx-> kill_next_chars ctx n)
+  | Kill_prev_chars n-> (fun ctx-> kill_prev_chars ctx n)
   | Delete_next_char -> delete_next_char
   | Delete_prev_char -> delete_prev_char
   | Delete_next_line -> delete_next_line
@@ -796,6 +832,10 @@ let doc_of_action = function
   | Goto_eol -> "move the cursor to the end of the current line."
   | Goto_bot -> "move the cursor to the beginning of the text."
   | Goto_eot -> "move the cursor to the end of the text."
+  | Delete_next_chars _-> "delete several characters after the cursor."
+  | Delete_prev_chars _-> "delete several characters before the cursor."
+  | Kill_next_chars _-> "cut several characters after the cursor."
+  | Kill_prev_chars _-> "cut several characters before the cursor."
   | Delete_next_char -> "delete the character after the cursor."
   | Delete_prev_char -> "delete the character before the cursor."
   | Delete_next_line -> "delete everything until the end of the current line."
