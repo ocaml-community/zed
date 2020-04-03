@@ -375,6 +375,7 @@ type action =
   | Prev_char
   | Next_line
   | Prev_line
+  | Goto of int
   | Goto_bol
   | Goto_eol
   | Goto_bot

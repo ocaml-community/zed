@@ -749,6 +749,7 @@ type action =
   | Prev_char
   | Next_line
   | Prev_line
+  | Goto of int
   | Goto_bol
   | Goto_eol
   | Goto_bot
@@ -790,6 +791,7 @@ let get_action = function
   | Prev_char -> prev_char
   | Next_line -> next_line
   | Prev_line -> prev_line
+  | Goto n -> fun ctx-> goto ctx n
   | Goto_bol -> goto_bol
   | Goto_eol -> goto_eol
   | Goto_bot -> goto_bot
@@ -828,6 +830,7 @@ let doc_of_action = function
   | Prev_char -> "move the cursor to the previous character."
   | Next_line -> "move the cursor to the next line."
   | Prev_line -> "move the cursor to the previous line."
+  | Goto _-> "move the cursor to the position"
   | Goto_bol -> "move the cursor to the beginning of the current line."
   | Goto_eol -> "move the cursor to the end of the current line."
   | Goto_bot -> "move the cursor to the beginning of the text."
