@@ -704,7 +704,7 @@ let undo { check; edit; cursor } =
       edit.undo_index <- index;
       edit.text <- text;
       edit.lines <- lines;
-      edit.send_changes {position= pos; removed; added; added_width; removed_width };
+      edit.send_changes {position= pos; removed= added; added= removed; added_width= removed_width; removed_width= added_width };
       Zed_cursor.goto cursor new_pos
     end else
       raise Cannot_edit
