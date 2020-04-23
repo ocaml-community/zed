@@ -321,6 +321,10 @@ val copy : 'a context -> unit
   (** [copy ctx] copies the current selectionned region to the
       clipboard. *)
 
+val copy_sequence: 'a context -> int -> int -> unit
+  (** [copy_sequence ctx start len] copies [len] characters start
+      from [start] to the clipboard. *)
+
 val kill : 'a context -> unit
   (** [kill ctx] copies the current selectionned region to the
       clipboard and remove it. *)

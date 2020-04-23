@@ -595,6 +595,11 @@ let copy ctx =
     ctx.edit.set_selection false
   end
 
+let copy_sequence ctx start len=
+  if start >= 0 && len < Zed_rope.length ctx.edit.text then
+    ctx.edit.clipboard.clipboard_set
+      (Zed_rope.sub ctx.edit.text start len)
+
 let kill ctx =
   if S.value ctx.edit.selection then begin
     let a = Zed_cursor.get_position ctx.cursor and b = Zed_cursor.get_position ctx.edit.mark in
