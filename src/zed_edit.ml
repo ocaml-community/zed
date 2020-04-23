@@ -454,6 +454,37 @@ let prev_line ctx =
     goto ctx ~set_wanted_column:false (min wanted_idx stop)
   end
 
+let join_line ctx =
+  let is_space uchar=
+    match UCharInfo.general_category uchar with
+    | `Cc | `Zs | `Zl | `Zp | `Mn -> true
+    | _-> false
+  in
+  let is_not_space uchar= not (is_space uchar) in
+  let text = ctx.edit.text in
+  let lines= lines ctx.edit in
+  let lines_num= Zed_lines.count lines in
+  let index = line ctx in
+  let position = Zed_lines.line_stop ctx.edit.lines index in
+  let len= 1 in
+  if index < lines_num then
+    if not ctx.check || ctx.edit.editable position len then begin
+      let width_remove= 1 in
+      if is_not_space (Zed_char.core (Zed_rope.get text (position - 1)))
+        && is_not_space (Zed_char.core (Zed_rope.get text (position + 1)))
+      then
+        let space= Zed_rope.of_string @@ Zed_string.of_utf8 " " in
+        let lines_space= Zed_lines.of_rope space in
+        ctx.edit.text <- Zed_rope.replace text position len space;
+        ctx.edit.lines <- Zed_lines.replace ctx.edit.lines position len lines_space;
+        modify ctx text lines position position 0 0 0 0
+      else
+        (ctx.edit.text <- Zed_rope.remove text position len;
+        ctx.edit.lines <- Zed_lines.remove ctx.edit.lines position len;
+        modify ctx text lines position position 0 len 0 width_remove)
+    end else
+      raise Cannot_edit
+
 let goto_bol ctx =
   goto ctx (Zed_lines.line_start ctx.edit.lines (Zed_cursor.get_line ctx.cursor))
 
@@ -749,6 +780,7 @@ type action =
   | Prev_char
   | Next_line
   | Prev_line
+  | Join_line
   | Goto of int
   | Goto_bol
   | Goto_eol
@@ -791,6 +823,7 @@ let get_action = function
   | Prev_char -> prev_char
   | Next_line -> next_line
   | Prev_line -> prev_line
+  | Join_line -> join_line
   | Goto n -> fun ctx-> goto ctx n
   | Goto_bol -> goto_bol
   | Goto_eol -> goto_eol
@@ -830,6 +863,7 @@ let doc_of_action = function
   | Prev_char -> "move the cursor to the previous character."
   | Next_line -> "move the cursor to the next line."
   | Prev_line -> "move the cursor to the previous line."
+  | Join_line -> "join two lines into one."
   | Goto _-> "move the cursor to the position"
   | Goto_bol -> "move the cursor to the beginning of the current line."
   | Goto_eol -> "move the cursor to the end of the current line."
