@@ -1,3 +1,16 @@
+3.0.0 (2020-04-25)
+------------------
+
+* `Zed_edit`:
+  * new actions
+    * `Join_line`
+    * `Goto of int`
+    * `Delete_next_chars of int`
+    * `Delete_prev_chars of int`
+    * `Kill_next_chars of int`
+    * `Kill_prev_chars of int`
+  * function `copy_sequence`
+
 2.0.7 (2020-04-08)
 ------------------
 
