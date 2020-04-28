@@ -596,7 +596,7 @@ let copy ctx =
   end
 
 let copy_sequence ctx start len=
-  if start >= 0 && len < Zed_rope.length ctx.edit.text then
+  if start >= 0 && len <= Zed_rope.length ctx.edit.text then
     ctx.edit.clipboard.clipboard_set
       (Zed_rope.sub ctx.edit.text start len)
 
