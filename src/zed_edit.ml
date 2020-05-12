@@ -224,6 +224,9 @@ let with_check check ctx = { ctx with check }
 let goto ctx ?set_wanted_column new_position =
   Zed_cursor.goto ctx.cursor ?set_wanted_column new_position
 
+let set_position ctx new_position =
+  Zed_cursor.goto ctx.cursor ~set_wanted_column:false new_position
+
 let move ctx ?set_wanted_column delta =
   Zed_cursor.move ctx.cursor ?set_wanted_column delta
 
@@ -784,6 +787,7 @@ type action =
   | Next_line
   | Prev_line
   | Join_line
+  | Set_pos of int
   | Goto of int
   | Goto_bol
   | Goto_eol
@@ -827,6 +831,7 @@ let get_action = function
   | Next_line -> next_line
   | Prev_line -> prev_line
   | Join_line -> join_line
+  | Set_pos n -> fun ctx-> set_position ctx n
   | Goto n -> fun ctx-> goto ctx n
   | Goto_bol -> goto_bol
   | Goto_eol -> goto_eol
@@ -867,6 +872,7 @@ let doc_of_action = function
   | Next_line -> "move the cursor to the next line."
   | Prev_line -> "move the cursor to the previous line."
   | Join_line -> "join two lines into one."
+  | Set_pos _-> "move the cursor to the position without poking wanted_column"
   | Goto _-> "move the cursor to the position"
   | Goto_bol -> "move the cursor to the beginning of the current line."
   | Goto_eol -> "move the cursor to the end of the current line."
