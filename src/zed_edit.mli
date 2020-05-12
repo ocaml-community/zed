@@ -380,6 +380,7 @@ type action =
   | Next_line
   | Prev_line
   | Join_line
+  | Set_pos of int
   | Goto of int
   | Goto_bol
   | Goto_eol
