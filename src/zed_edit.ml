@@ -781,6 +781,7 @@ let undo { check; edit; cursor } =
 
 type action =
   | Insert of Zed_char.t
+  | Insert_str of Zed_string.t
   | Newline
   | Next_char
   | Prev_char
@@ -825,6 +826,8 @@ let get_action = function
       if Zed_char.length ch = 1
       then insert_char ctx (Zed_char.core ch)
       else insert ctx (Zed_rope.singleton ch))
+  | Insert_str str -> (fun ctx ->
+      insert ctx (Zed_rope.of_string str))
   | Newline -> newline
   | Next_char -> next_char
   | Prev_char -> prev_char
@@ -866,6 +869,7 @@ let get_action = function
 
 let doc_of_action = function
   | Insert _ -> "insert the given character."
+  | Insert_str _ -> "insert the given string."
   | Newline -> "insert a newline character."
   | Next_char -> "move the cursor to the next character."
   | Prev_char -> "move the cursor to the previous character."
@@ -911,6 +915,7 @@ let actions = [
   Prev_char, "prev-char";
   Next_line, "next-line";
   Prev_line, "prev-line";
+  Join_line, "join-line";
   Goto_bol, "goto-bol";
   Goto_eol, "goto-eol";
   Goto_bot, "goto-bot";
@@ -966,10 +971,64 @@ let parse_insert x =
   end else
     raise Not_found
 
+let parse_insert_str str =
+  if Zed_utf8.starts_with str "insert_str(" && Zed_utf8.ends_with str ")" then
+    let str = String.sub str 11 (String.length str - 12) in
+    try
+      Insert_str (Zed_string.of_utf8 str)
+    with _ ->
+      raise Not_found
+  else
+    raise Not_found
+
+let parse_action_count action act_name str=
+  let act_len= String.length act_name in
+  if Zed_utf8.starts_with str (act_name ^ "(") && Zed_utf8.ends_with str ")" then
+    let str = String.sub str (act_len+1) (String.length str - (act_len+2)) in
+    try
+      action (int_of_string str)
+    with _ ->
+      raise Not_found
+  else
+    raise Not_found
+
+let parse_set_pos= parse_action_count (fun c-> Set_pos c) "set-pos"
+
+let parse_goto= parse_action_count (fun c-> Goto c) "goto"
+
+let parse_delete_next_chars= parse_action_count
+  (fun c-> Delete_next_chars c) "delete-next-chars"
+
+let parse_delete_prev_chars= parse_action_count
+  (fun c-> Delete_prev_chars c) "delete-prev-chars"
+
+let parse_kill_next_chars= parse_action_count
+  (fun c-> Kill_next_chars c) "kill-next-chars"
+
+let parse_kill_prev_chars= parse_action_count
+  (fun c-> Kill_prev_chars c) "kill-prev-chars"
+
+let parse_action_param x=
+  try parse_insert x
+  with Not_found->
+  try parse_insert_str x
+  with Not_found->
+  try parse_set_pos x
+  with Not_found->
+  try parse_goto x
+  with Not_found->
+  try parse_delete_next_chars x
+  with Not_found->
+  try parse_delete_prev_chars x
+  with Not_found->
+  try parse_kill_next_chars x
+  with Not_found->
+  parse_kill_prev_chars x
+
 let action_of_name x =
   let rec loop a b =
     if a = b then
-      parse_insert x
+      parse_action_param x
     else
       let c = (a + b) / 2 in
       let action, name = Array.unsafe_get names_to_actions c in
@@ -998,6 +1057,8 @@ let name_of_action x =
         | _ ->
             name
   in
+  let open Printf in
+  let param_action_to_str name c= sprintf "%s(%d)" name c in
   match x with
     | Insert ch ->
         let code = UChar.code (Zed_char.core ch) in
@@ -1005,13 +1066,27 @@ let name_of_action x =
           let ch = Char.chr (UChar.code (Zed_char.core ch)) in
           match ch with
             | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
-                Printf.sprintf "insert(%c)" ch
+                sprintf "insert(%c)" ch
             | _ ->
-                Printf.sprintf "insert(U+%02x)" code
+                sprintf "insert(U+%02x)" code
         else if code <= 0xffff then
-          Printf.sprintf "insert(U+%04x)" code
+          sprintf "insert(U+%04x)" code
         else
-          Printf.sprintf "insert(U+%06x)" code
+          sprintf "insert(U+%06x)" code
+    | Insert_str s->
+        sprintf "insert-str(%s)" (Zed_string.to_utf8 s)
+    | Set_pos c->
+      param_action_to_str "set-pos" c
+    | Goto c->
+      param_action_to_str "goto" c
+    | Delete_next_chars c->
+      param_action_to_str "delete-next-chars" c
+    | Delete_prev_chars c->
+      param_action_to_str "delete-prev-chars" c
+    | Kill_next_chars c->
+      param_action_to_str "kill-next-chars" c
+    | Kill_prev_chars c->
+      param_action_to_str "kill-prev-chars" c
     | _ ->
         loop 0 (Array.length actions_to_names)
 

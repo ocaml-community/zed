@@ -374,6 +374,7 @@ val undo : 'a context -> unit
 (** Type of actions. *)
 type action =
   | Insert of Zed_char.t
+  | Insert_str of Zed_string.t
   | Newline
   | Next_char
   | Prev_char
@@ -427,13 +428,16 @@ val doc_of_action : action -> string
 val action_of_name : string -> action
   (** [action_of_name str] converts the given action name into an
       action. Action name are the same as function name but with '_'
-      replaced by '-'. It raises [Not_found] if the name does not
-      correspond to an action.
+      replaced by '-', number parameter replaced with "(number)".
+      It raises [Not_found] if the name does not correspond to an action.
 
       [Insert ch] is represented by "insert(<char>)" where [<char>] is:
 
       - a literal ascii character, such as "a", "b", ...
       - a unicode character, written "U+< code >", such as "U+0041"
+
+      [Insert_str str] is represented by "insert-str(<str>)" where
+      [<str>] is raw utf8 string.
   *)
 
 val name_of_action : action -> string
