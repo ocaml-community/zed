@@ -445,7 +445,7 @@ let prev_line ctx =
 
 let join_line ctx =
   let is_space uchar=
-    match UCharInfo.general_category uchar with
+    match Uucp.Gc.general_category uchar with
     | `Cc | `Zs | `Zl | `Zp | `Mn -> true
     | _-> false
   in
