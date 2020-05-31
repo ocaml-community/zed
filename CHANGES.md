@@ -1,7 +1,9 @@
-next
+3.1.0 (2020-05-30)
 ------------------
 
-* `Zed_edit`: add `Set_pos of int` action
+* `Zed_edit`
+  * `Set_pos` action
+  * `Insert_str` action
 
 3.0.1 (2020-04-28)
 ------------------
