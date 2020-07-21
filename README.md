@@ -15,6 +15,8 @@ Zed provides:
 * key-binding helpers,
 * general purpose unicode rope manipulation functions.
 
+[API Documentation](http://ocaml-community.github.io/zed/)
+
 Installation
 ------------
 
