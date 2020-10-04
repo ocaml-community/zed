@@ -9,8 +9,6 @@
 
 (** UTF-8 enoded strings *)
 
-open CamomileLibrary
-
 type t = string
     (** Type of UTF-8 encoded strings. *)
 
@@ -52,18 +50,18 @@ val next_error : t -> int -> int * int * string
 
 (** {5 Construction} *)
 
-val singleton : UChar.t -> t
+val singleton : Uchar.t -> t
   (** [singleton ch] creates a string of length 1 containing only the
       given character. *)
 
-val make : int -> UChar.t -> t
+val make : int -> Uchar.t -> t
   (** [make n ch] creates a string of length [n] filled with [ch]. *)
 
-val init : int -> (int -> UChar.t) -> t
+val init : int -> (int -> Uchar.t) -> t
   (** [init n f] returns the contenation of [singleton (f 0)],
       [singleton (f 1)], ..., [singleton (f (n - 1))]. *)
 
-val rev_init : int -> (int -> UChar.t) -> t
+val rev_init : int -> (int -> Uchar.t) -> t
   (** [rev_init n f] returns the contenation of [singleton (f (n -
       1))], ..., [singleton (f 1)], [singleton (f 0)]. *)
 
@@ -79,7 +77,7 @@ val compare : t -> t -> int
 
 (** {5 Random access} *)
 
-val get : t -> int -> UChar.t
+val get : t -> int -> Uchar.t
   (** [get str idx] returns the character at index [idx] in
       [str]. *)
 
@@ -125,87 +123,87 @@ val rev_concat : t -> t list -> t
   (** [concat sep l] returns the concatenation of all strings of [l]
       in reverse order separated by [sep]. *)
 
-val explode : t -> UChar.t list
+val explode : t -> Uchar.t list
   (** [explode str] returns the list of all characters of [str]. *)
 
-val rev_explode : t -> UChar.t list
+val rev_explode : t -> Uchar.t list
   (** [rev_explode str] returns the list of all characters of [str] in
       reverse order. *)
 
-val implode : UChar.t list -> t
+val implode : Uchar.t list -> t
   (** [implode l] returns the concatenation of all characters of [l]. *)
 
-val rev_implode : UChar.t list -> t
+val rev_implode : Uchar.t list -> t
   (** [rev_implode l] is the same as [implode (List.rev l)] but more
       efficient. *)
 
 (** {5 Text traversals} *)
 
-val iter : (UChar.t -> unit) -> t -> unit
+val iter : (Uchar.t -> unit) -> t -> unit
   (** [iter f str] applies [f] an all characters of [str] starting
       from the left. *)
 
-val rev_iter : (UChar.t -> unit) -> t -> unit
+val rev_iter : (Uchar.t -> unit) -> t -> unit
   (** [rev_iter f str] applies [f] an all characters of [str] starting
       from the right. *)
 
-val fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val fold : (Uchar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold f str acc] applies [f] on all characters of [str]
       starting from the left, accumulating a value. *)
 
-val rev_fold : (UChar.t -> 'a -> 'a) -> t -> 'a -> 'a
+val rev_fold : (Uchar.t -> 'a -> 'a) -> t -> 'a -> 'a
   (** [rev_fold f str acc] applies [f] on all characters of [str]
       starting from the right, accumulating a value. *)
 
-val map : (UChar.t -> UChar.t) -> t -> t
+val map : (Uchar.t -> Uchar.t) -> t -> t
   (** [map f str] maps all characters of [str] with [f]. *)
 
-val rev_map : (UChar.t -> UChar.t) -> t -> t
+val rev_map : (Uchar.t -> Uchar.t) -> t -> t
   (** [rev_map f str] maps all characters of [str] with [f] in reverse
       order. *)
 
-val map_concat : (UChar.t -> t) -> t -> t
+val map_concat : (Uchar.t -> t) -> t -> t
   (** [map f str] maps all characters of [str] with [f] and
       concatenate the result. *)
 
-val rev_map_concat : (UChar.t -> t) -> t -> t
+val rev_map_concat : (Uchar.t -> t) -> t -> t
   (** [rev_map f str] maps all characters of [str] with [f] in reverse
       order and concatenate the result. *)
 
-val filter : (UChar.t -> bool) -> t -> t
+val filter : (Uchar.t -> bool) -> t -> t
   (** [filter f str] filters characters of [str] with [f]. *)
 
-val rev_filter : (UChar.t -> bool) -> t -> t
+val rev_filter : (Uchar.t -> bool) -> t -> t
   (** [rev_filter f str] filters characters of [str] with [f] in
       reverse order. *)
 
-val filter_map : (UChar.t -> UChar.t option) -> t -> t
+val filter_map : (Uchar.t -> Uchar.t option) -> t -> t
   (** [filter_map f str] filters and maps characters of [str] with
       [f]. *)
 
-val rev_filter_map : (UChar.t -> UChar.t option) -> t -> t
+val rev_filter_map : (Uchar.t -> Uchar.t option) -> t -> t
   (** [rev_filter_map f str] filters and maps characters of [str] with
       [f] in reverse order. *)
 
-val filter_map_concat : (UChar.t -> t option) -> t -> t
+val filter_map_concat : (Uchar.t -> t option) -> t -> t
   (** [filter_map f str] filters and maps characters of [str] with [f]
       and concatenate the result. *)
 
-val rev_filter_map_concat : (UChar.t -> t option) -> t -> t
+val rev_filter_map_concat : (Uchar.t -> t option) -> t -> t
   (** [rev_filter_map f str] filters and maps characters of [str] with
       [f] in reverse order and concatenate the result. *)
 
 (** {5 Scanning} *)
 
-val for_all : (UChar.t -> bool) -> t -> bool
+val for_all : (Uchar.t -> bool) -> t -> bool
   (** [for_all f text] returns whether all characters of [text] verify
       the predicate [f]. *)
 
-val exists : (UChar.t -> bool) -> t -> bool
+val exists : (Uchar.t -> bool) -> t -> bool
   (** [exists f text] returns whether at least one character of [text]
       verify [f]. *)
 
-val count : (UChar.t -> bool) -> t -> int
+val count : (Uchar.t -> bool) -> t -> int
   (** [count f text] returhs the number of characters of [text]
       verifying [f]. *)
 
@@ -224,7 +222,7 @@ val ends_with : t -> t -> bool
 
 (** {5 Stripping} *)
 
-val strip : ?predicate : (UChar.t -> bool) -> t -> t
+val strip : ?predicate : (Uchar.t -> bool) -> t -> t
   (** [strip ?predicate text] returns [text] without its firsts and
       lasts characters that match [predicate]. [predicate] default to
       testing whether the given character has the [`White_Space]
@@ -235,11 +233,11 @@ val strip : ?predicate : (UChar.t -> bool) -> t -> t
       ]}
   *)
 
-val lstrip : ?predicate : (UChar.t -> bool) -> t -> t
+val lstrip : ?predicate : (Uchar.t -> bool) -> t -> t
   (** [lstrip ?predicate text] is the same as {!strip} but it only
       removes characters at the left of [text]. *)
 
-val rstrip : ?predicate : (UChar.t -> bool) -> t -> t
+val rstrip : ?predicate : (Uchar.t -> bool) -> t -> t
   (** [lstrip ?predicate text] is the same as {!strip} but it only
       removes characters at the right of [text]. *)
 
@@ -253,13 +251,13 @@ val rchop : t -> t
 
 (** {5 Buffers} *)
 
-val add : Buffer.t -> UChar.t -> unit
+val add : Buffer.t -> Uchar.t -> unit
   (** [add buf ch] is the same as [Buffer.add_string buf (singleton
       ch)] but is more efficient. *)
 
 (** {5 Escaping} *)
 
-val escaped_char : UChar.t -> t
+val escaped_char : Uchar.t -> t
   (** [escaped_char ch] returns a string containg [ch] or an escaped
       version of [ch] if:
       - [ch] is a control character (code < 32)
@@ -269,7 +267,7 @@ val escaped_char : UChar.t -> t
       It uses the syntax [\xXX], [\uXXXX], [\UXXXXXX] or a specific
       escape sequence [\n, \r, ...]. *)
 
-val add_escaped_char : Buffer.t -> UChar.t -> unit
+val add_escaped_char : Buffer.t -> Uchar.t -> unit
   (** [add_escaped_char buf ch] is the same as [Buffer.add_string buf
       (escaped_char ch)] but a bit more efficient. *)
 
@@ -281,13 +279,13 @@ val add_escaped : Buffer.t -> t -> unit
   (** [add_escaped_char buf text] is the same as [Buffer.add_string
       buf (escaped text)] but a bit more efficient. *)
 
-val escaped_string : CamomileLibraryDefault.Camomile.CharEncoding.t -> string -> t
+val escaped_string : Uutf.encoding -> string -> t
   (** [escaped_string enc str] escape the string [str] which is
       encoded with encoding [enc]. If decoding [str] with [enc] fails,
       it escape all non-printable bytes of [str] with the syntax
       [\yAB]. *)
 
-val add_escaped_string : Buffer.t -> CamomileLibraryDefault.Camomile.CharEncoding.t -> string -> unit
+val add_escaped_string : Buffer.t -> Uutf.encoding -> string -> unit
   (** [add_escaped_char buf enc text] is the same as
       [Buffer.add_string buf (escaped_string enc text)] but a bit more
       efficient. *)
@@ -302,15 +300,15 @@ val prev : t -> int -> int
   (** [prev str ofs] returns the offset of the previous character in
       [str]. *)
 
-val extract : t -> int -> UChar.t
+val extract : t -> int -> Uchar.t
   (** [extract str ofs] returns the code-point at offset [ofs] in
       [str]. *)
 
-val extract_next : t -> int -> UChar.t * int
+val extract_next : t -> int -> Uchar.t * int
   (** [extract_next str ofs] returns the code-point at offset [ofs] in
       [str] and the offset of the next character. *)
 
-val extract_prev : t -> int -> UChar.t * int
+val extract_prev : t -> int -> Uchar.t * int
   (** [extract_prev str ofs] returns the code-point at the previous
       offset in [str] and this offset. *)
 
@@ -327,14 +325,14 @@ val unsafe_prev : t -> int -> int
   (** [unsafe_prev str ofs] returns the offset of the previous
       character in [str]. *)
 
-val unsafe_extract : t -> int -> UChar.t
+val unsafe_extract : t -> int -> Uchar.t
   (** [unsafe_extract str ofs] returns the code-point at offset [ofs]
       in [str]. *)
 
-val unsafe_extract_next : t -> int -> UChar.t * int
+val unsafe_extract_next : t -> int -> Uchar.t * int
   (** [unsafe_extract_next str ofs] returns the code-point at offset
       [ofs] in [str] and the offset the next character. *)
 
-val unsafe_extract_prev : t -> int -> UChar.t * int
+val unsafe_extract_prev : t -> int -> Uchar.t * int
   (** [unsafe_extract_prev str ofs] returns the code-point at the
       previous offset in [str] and this offset. *)

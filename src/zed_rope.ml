@@ -18,7 +18,7 @@ exception Out_of_bounds
    +-----------------------------------------------------------------+ *)
 
 type t=
-  (* the size is the number of UChar.t in the rope *)
+  (* the size is the number of Uchar.t in the rope *)
   | Leaf of Zed_string.t * (int * int)
     (* [Leaf(str, (len, size))] *)
   | Node of int * (int * int) * t * (int * int) * t
@@ -318,8 +318,7 @@ let replace rope pos len repl =
   append (sub rope 0 pos) (append repl (sub rope (pos + len) (length rope - pos - len)))
 
 let insert_uChar rope pos ch =
-  let open CamomileLibraryDefault.Camomile in
-  if UChar.code ch = 0 then
+  if Uchar.to_int ch = 0 then
     rope
   else
     if Zed_char.is_combining_mark ch then
@@ -1003,82 +1002,23 @@ let rec to_string t=
   | Leaf (s,_)-> s
   | Node (_,_,l,_,r)-> Zed_string.append (to_string l) (to_string r)
 
-module Text = struct
-  type t = rope
+let case_map f ?locale:_ t =
+  let buf = Buffer.create () in
+  let rec loop zip =
+    match Zip_raw.next zip with
+    | exception Out_of_bounds ->
+        Buffer.contents buf
+    | u, zip ->
+        begin match f u with
+        | `Self -> Buffer.add_uChar buf u
+        | `Uchars us -> List.iter (Buffer.add_uChar buf) us
+        end;
+	loop zip
+  in
+  loop (Zip_raw.make_f t 0)
 
-  let get = get
-  let init = init
-  let length = length
+let lowercase ?locale t =
+  case_map Uucp.Case.Map.to_lower ?locale t
 
-  type index = Zip.t
-  let look _ zip = fst (Zip.next zip)
-  let nth rope idx = Zip.make_f rope idx
-  let next _ zip = Zip.move 1 zip
-  let prev _ zip = Zip.move (-1) zip
-  let out_of_range _ zip = Zip.at_eos zip
-
-  let iter = iter
-  let compare = compare
-
-  let first rope = Zip.make_f rope 0
-  let last rope = Zip.make_b rope 1
-  let move _ zip delta = Zip.move delta zip
-  let compare_index _ zip1 zip2 = Zip.offset zip1 - Zip.offset zip2
-
-  module Buf = struct
-    type buf = Buffer.t
-    let create _ = Buffer.create ()
-    let contents = Buffer.contents
-    let clear = Buffer.reset
-    let reset = Buffer.reset
-    let add_char = Buffer.add_uChar
-    let add_string= Buffer.add_rope
-    let add_buffer buf buf' = add_string buf (Buffer.contents buf')
-  end
-end
-
-module Text_core = struct
-  include Text
-  let get t i= Zed_char.core (get t i)
-  let init = init_from_uChars
-  let look _ zip = Zed_char.core (fst (Zip.next zip))
-  let iter f= iter (fun c-> f (Zed_char.core c))
-end
-
-module Text_raw = struct
-  type t = rope
-  type index = Zip_raw.t
-
-  let get= get_raw
-  let init = init_from_uChars
-  let length = length
-
-  let look _ zip = fst (Zip_raw.next zip)
-  let iter f= iter (fun c-> f (Zed_char.core c))
-
-  let nth rope idx = Zip_raw.make_f rope idx
-  let next _ zip = Zip_raw.move 1 zip
-  let prev _ zip = Zip_raw.move (-1) zip
-  let out_of_range _ zip = Zip_raw.at_eos zip
-
-  let iter = iter
-  let compare = compare
-
-  let first rope = Zip_raw.make_f rope 0
-  let last rope = Zip_raw.make_b rope 1
-  let move _ zip delta = Zip_raw.move delta zip
-  let compare_index _ zip1 zip2 = Zip_raw.offset zip1 - Zip_raw.offset zip2
-
-  module Buf = struct
-    type buf = Buffer.t
-    let create _ = Buffer.create ()
-    let contents = Buffer.contents
-    let clear = Buffer.reset
-    let reset = Buffer.reset
-    let add_char = Buffer.add_uChar
-    let add_string= Buffer.add_rope
-    let add_buffer buf buf' = add_string buf (Buffer.contents buf')
-  end
-
-end
-
+let uppercase ?locale t =
+  case_map Uucp.Case.Map.to_upper ?locale t
