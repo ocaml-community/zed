@@ -11,7 +11,7 @@
 
 (maintainers "opam-devel@lists.ocaml.org")
 
-(license BSD3)
+(license BSD-3-Clause)
 
 (package
  (name zed)
