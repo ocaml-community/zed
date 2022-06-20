@@ -1,3 +1,8 @@
+3.2.0 (Unreleased)
+------------------
+
+* Replace Camomile with uu* (Nicolás Ojeda Bär, ZAN DoYe, Thibaut Mattio, #46)
+
 3.1.0 (2020-05-30)
 ------------------
 

@@ -8,7 +8,6 @@
  *)
 
 
-open CamomileLibraryDefault.Camomile
 open Result
 
 type t= Zed_utf8.t
@@ -27,10 +26,10 @@ let core t= Zed_utf8.unsafe_extract t 0
 let combined t= List.tl (Zed_utf8.explode t)
 
 let prop_uChar uChar=
-  match CharInfo_width.width uChar with
+  match Uucp.Break.tty_width_hint uChar with
   | -1 -> Other
   | 0->
-    if UChar.code uChar = 0
+    if Uchar.to_int uChar = 0
     then Null
     else Printable 0
   | w-> Printable w
@@ -55,7 +54,7 @@ let is_combining_mark uChar=
 let length= Zed_utf8.length
 let size= length
 
-let width t= CharInfo_width.width (Zed_utf8.unsafe_extract t 0)
+let width t= Uucp.Break.tty_width_hint (Zed_utf8.unsafe_extract t 0)
 
 let out_of_range t i= i < 0 || i >= size t
 let get= Zed_utf8.get
@@ -72,7 +71,7 @@ let append ch mark=
 let compare_core t1 t2=
   let core1= Zed_utf8.unsafe_extract t1 0
   and core2= Zed_utf8.unsafe_extract t2 0 in
-  UChar.compare core1 core2
+  Uchar.compare core1 core2
 
 let compare_raw= Zed_utf8.compare
 
@@ -160,28 +159,10 @@ let of_utf8 ?(indv_combining=true) str=
 let to_utf8 : t -> string= id
 
 let unsafe_of_char c=
-  Zed_utf8.singleton (UChar.of_char c)
+  Zed_utf8.singleton (Uchar.of_char c)
 
 let unsafe_of_uChar uChar= Zed_utf8.singleton uChar
 
 let for_all= Zed_utf8.for_all
 let iter= Zed_utf8.iter
-
-module US(US:UnicodeString.Type) = struct
-  module Convert = Zed_utils.Convert(US)
-  let of_t t= Zed_utf8.explode t |> Convert.of_list
-  let to_t us=
-    let len= US.length us in
-    let rec create i=
-      if i < len
-      then US.get us i :: create (i+1)
-      else []
-    in
-    let uChars= create 0 in
-    of_uChars uChars
-  let to_t_exn us=
-    match to_t us with
-    | Some t, _-> t
-    | _-> failwith "to_t_exn"
-end
 

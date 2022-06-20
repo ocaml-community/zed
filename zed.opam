@@ -18,9 +18,10 @@ depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "4.02.3"}
   "base-bytes"
-  "camomile" {>= "1.0.1"}
   "react"
-  "charInfo_width" {>= "1.1.0" & < "2.0~"}
+  "result"
+  "uutf"
+  "uuseg"
   "odoc" {with-doc}
 ]
 build: [

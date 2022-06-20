@@ -12,7 +12,6 @@
    because neither seems to work with every version of OCaml. *)
 let pervasives_compare= compare
 
-open CamomileLibraryDefault.Camomile
 open Result
 
 exception Invalid of string * string
@@ -518,102 +517,8 @@ module Zed_string0 = struct
 
     let add_buffer b1 b2= Buffer.add_buffer b1 b2
   end
-
-  module US0(US:UnicodeString.Type) = struct
-    module Convert = Zed_utils.Convert(US)
-    let of_t t= Zed_utf8.explode t|> Convert.of_list
-
-    let to_t us=
-      let first= US.first us
-      and last= US.last us in
-      let length= US.length us in
-      let rec create acc i=
-        if US.compare_index us i first >= 0
-        then create (US.look us i :: acc) (US.prev us i)
-        else acc
-      in
-      let uChars=
-        if length > 0 then
-          create [] last
-        else
-          []
-      in
-      of_uChars uChars
-
-    let to_t_exn us= let t,_= to_t us in t
-  end
-end
-
-module US_Core = struct
-  include Zed_string0
-
-  let get str i= Zed_char.core (get str i)
-  let init= init_from_uChars
-  let iter f str= iter (fun zChar-> f (Zed_char.core zChar)) str
-  let compare str1 str2= Zed_utils.list_compare
-    ~compare:Zed_char.compare_core
-    (explode str1) (explode str2)
-
-  let to_list str= explode str
-    |> List.map Zed_char.core
-
-  let to_array str= to_list str |> Array.of_list
-
-  module US(US:UnicodeString.Type) = struct
-    module Convert = Zed_utils.Convert(US)
-    let of_t t= (explode t)
-      |> List.map Zed_char.core
-      |> Convert.of_list
-  end
-  module Buf = struct
-    include Buf0
-    let add_char= add_uChar
-  end
-end
-
-module US_Raw = struct
-  type t= Zed_string0.t
-
-  let get= Zed_string0.get_raw
-  let init= Zed_string0.init_from_uChars
-  let length= Zed_utf8.length
-
-  type index= int
-
-  let check_range t n= n >= 0 && n < Zed_string0.size t
-  let out_of_range str ofs=
-    ofs < 0 || ofs >= String.length str
-
-  let look str ofs= Zed_utf8.extract str ofs
-
-  let nth str idx= Zed_string0.move_l str 0 idx
-
-  let next= Zed_utf8.next
-
-  let prev= Zed_utf8.prev
-
-  let first _= 0
-  let last str= Zed_utf8.prev str (String.length str)
-
-  let move= Zed_string0.move_raw
-
-  let compare_index _str= pervasives_compare
-
-  let iter f str= List.iter f (Zed_utf8.explode str)
-
-  let compare str1 str2=
-    Zed_utils.list_compare
-      ~compare:UChar.compare
-      (Zed_utf8.explode str1) (Zed_utf8.explode str2)
-
-  module US = Zed_string0.US0
-  module Buf = struct
-    include Zed_string0.Buf0
-    let add_char= add_uChar
-  end
 end
 
 include Zed_string0
-module US = US0
 module Buf = Buf0
 

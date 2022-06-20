@@ -28,11 +28,7 @@ cursor management facilities.")
   (ocaml
    (>= 4.02.3))
   base-bytes
-  (camomile
-   (>= 1.0.1))
-  (charInfo_width
-   (and
-    (>= 1.1.0)
-    (< 2.0~)))
   react
-  result))
+  result
+  uutf
+  uuseg))

@@ -7,7 +7,6 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibrary
 open Result
 
 exception Invalid of string * string
@@ -65,8 +64,8 @@ val init : int -> (int -> Zed_char.t) -> t
   (** [init n f] returns the contenation of [implode [(f 0)]],
       [implode [(f 1)]], ..., [implode [(f (n - 1))]]. *)
 
-val init_from_uChars : int -> (int -> UChar.t) -> t
-  (** [init n f] creates a sequence of UChar.t of [f 0], [f 1], ..., [f (n-1)] and implode the contenation of it. *)
+val init_from_uChars : int -> (int -> Uchar.t) -> t
+  (** [init n f] creates a sequence of Uchar.t of [f 0], [f 1], ..., [f (n-1)] and implode the contenation of it. *)
 
 val make : int -> Zed_char.t -> t
   (** [make n ch] creates a Zed_string.t of length [n] filled with [ch]. *)
@@ -74,18 +73,18 @@ val make : int -> Zed_char.t -> t
 val copy : t -> t
   (** [copy s] returns a copy of [s], that is, a fresh Zed_string.t containing the same elements as [s]. *)
 
-val to_raw_list : t -> UChar.t list
-  (** Same as explode, but the elements in the list is [UChar.t]. *)
+val to_raw_list : t -> Uchar.t list
+  (** Same as explode, but the elements in the list is [Uchar.t]. *)
 
-val to_raw_array : t -> UChar.t array
-  (** Same as explode, but the elements in the array is [UChar.t]. *)
+val to_raw_array : t -> Uchar.t array
+  (** Same as explode, but the elements in the array is [Uchar.t]. *)
 
 type index = int
 val get : t -> int -> Zed_char.t
   (** [get str idx] returns the Zed_char.t at index [idx] in [str]. *)
 
-val get_raw : t -> int -> UChar.t
-  (** [get_raw str idx] returns the UChar.t at UChar.t based index [idx] in [str]. *)
+val get_raw : t -> int -> Uchar.t
+  (** [get_raw str idx] returns the Uchar.t at Uchar.t based index [idx] in [str]. *)
 
 val empty : unit -> t
   (** [empty ()] creates an empty Zed_string.t. *)
@@ -100,7 +99,7 @@ val bytes : t -> index
   (** [bytes str] returns the number of bytes in [str]. It's also the index point to the end of [str]. *)
 
 val size : t -> int
-  (** [size str] returns the number of UChar.t in [str]. *)
+  (** [size str] returns the number of Uchar.t in [str]. *)
 
 val length : t -> int
   (** [length str] returns the number of Zed_char.t in [str] *)
@@ -120,11 +119,11 @@ val extract_next : t -> index -> (Zed_char.t * index)
 val extract_prev : t -> index -> (Zed_char.t * index)
   (** [extract_prev str ofs] returns the Zed_char.t at the previous offset [ofs] in [str] and this offset. *)
 
-val unsafe_of_uChars : UChar.t list -> t
-  (** [unsafe_of_uChars l] returns the concatenation of all UChar.t of [l]. *)
+val unsafe_of_uChars : Uchar.t list -> t
+  (** [unsafe_of_uChars l] returns the concatenation of all Uchar.t of [l]. *)
 
-val of_uChars : UChar.t list -> t * UChar.t list
-  (** [of_uChars l] returns a tuple of which the first element is a well formed Zed_string.t concatenating of all UChar.t of [l] and the second element is a list of the remaining UChar.t. *)
+val of_uChars : Uchar.t list -> t * Uchar.t list
+  (** [of_uChars l] returns a tuple of which the first element is a well formed Zed_string.t concatenating of all Uchar.t of [l] and the second element is a list of the remaining Uchar.t. *)
 
 val for_all : (Zed_char.t -> bool) -> t -> bool
   (** [for_all p zStr] checks if all Zed_char.t in [zStr]
@@ -151,7 +150,7 @@ val rev_map : (Zed_char.t -> Zed_char.t) -> t -> t
 
 
 val check_range : t -> int -> bool
-val look : t -> index -> UChar.t
+val look : t -> index -> Uchar.t
   (** [look str idx] returns the character in the location [idx] of [str]. *)
 
 val nth : t -> int -> index
@@ -179,7 +178,7 @@ val move : t -> index -> int -> index
   (**  [move str i n] if n >= 0, then returns [n]-th character after [i] and otherwise returns -[n]-th character before [i.] If there is no such character, or [i] does not point a valid character, the result is unspecified. *)
 
 val move_raw : t -> index -> int -> index
-  (**  [move_raw str i n] if n >= 0, then returns [n]-th UChar.t after [i] and otherwise returns -[n]-th UChar.t before [i.] If there is no such UChar.t, or [i] does not point a valid UChar.t, the result is unspecified. *)
+  (**  [move_raw str i n] if n >= 0, then returns [n]-th Uchar.t after [i] and otherwise returns -[n]-th Uchar.t before [i.] If there is no such Uchar.t, or [i] does not point a valid Uchar.t, the result is unspecified. *)
 
 val compare_index : t -> index -> index -> int
   (**  [compare_index str i j] returns a positive integer if [i] is the location placed after [j] in [str], 0 if [i] and [j] point the same location, and a negative integer if [i] is the location placed before [j] in [str]. *)
@@ -209,20 +208,6 @@ val append : t -> t -> t
     @raise Zed_utf8.Invalid
    *)
 
-module US :
-  functor (US : UnicodeString.Type) ->
-    sig
-      module Convert :
-        sig
-          val of_list : UChar.t list -> US.t
-          val of_array : UChar.t array -> US.t
-          val to_uChars : US.t -> UChar.t list
-        end
-      val of_t : t -> US.t
-      val to_t : US.t -> t * UChar.t list
-      val to_t_exn : US.t -> t
-    end
-
 module Buf :
   sig
     type buf
@@ -246,7 +231,7 @@ module Buf :
     val add_zChar : buf -> Zed_char.t -> unit
       (** [add buffer zChar] add [zChar] at the end of [buffer]. *)
 
-    val add_uChar : buf -> UChar.t -> unit
+    val add_uChar : buf -> Uchar.t -> unit
       (** [add buffer uChar] add [uChar] at the end of [buffer]. *)
 
     val add_string : buf -> t -> unit
@@ -255,92 +240,4 @@ module Buf :
     val add_buffer : buf -> buf -> unit
       (** [add buffer buf] add [buf] at the end of [buffer]. *)
   end
-
-module US_Core : sig
-  type t
-  type index = int
-  val length : t -> int
-  val size : t -> int
-
-  val look : t -> index -> UChar.t
-  val nth : t -> int -> index
-  val next : t -> index -> index
-  val prev : t -> index -> index
-  val out_of_range : t -> index -> bool
-  val first : t -> index
-  val last : t -> index
-  val move : t -> index -> int -> index
-  val compare_index : t -> index -> index -> int
-
-  val get : t -> int -> UChar.t
-  val init : int -> (int -> UChar.t) -> t
-  val iter : (UChar.t -> unit) -> t -> unit
-  val compare : t -> t -> int
-
-  val to_list : t -> UChar.t list
-  val to_array : t -> UChar.t array
-
-  module US :
-    functor (US : UnicodeString.Type) ->
-      sig
-        module Convert :
-          sig
-            val of_list : UChar.t list -> US.t
-            val of_array : UChar.t array -> US.t
-            val to_uChars : US.t -> UChar.t list
-          end
-        val of_t : t -> US.t
-      end
-
-  module Buf :
-    sig
-      type buf = Buf.buf
-      val create : int -> buf
-      val contents : buf -> t
-      val clear : buf -> unit
-      val reset : buf -> unit
-      val add_zChar : buf -> Zed_char.t -> unit
-      val add_uChar : buf -> UChar.t -> unit
-      val add_string : buf -> t -> unit
-      val add_buffer : buf -> buf -> unit
-      val add_char : buf -> UChar.t -> unit
-    end
-end
-
-module US_Raw : sig
-  type t
-  val get : t -> int -> UChar.t
-  val init : int -> (int -> UChar.t) -> t
-  val length : t -> int
-  type index= int
-  val check_range : t -> int -> bool
-
-  val look : t -> index -> UChar.t
-  val nth : t -> int -> index
-  val next : t -> index -> index
-  val prev : t -> index -> index
-  val out_of_range : t -> index -> bool
-  val first : t -> index
-  val last : t -> index
-  val move : t -> index -> int -> index
-  val compare_index : t -> index -> index -> int
-  val iter : (UChar.t -> unit) -> t -> unit
-  val compare : t -> t -> int
-
-  module US = US
-
-  module Buf :
-    sig
-      type buf = Buf.buf
-      val create : int -> buf
-      val contents : buf -> t
-      val clear : buf -> unit
-      val reset : buf -> unit
-      val add_zChar : buf -> Zed_char.t -> unit
-      val add_uChar : buf -> UChar.t -> unit
-      val add_string : buf -> t -> unit
-      val add_buffer : buf -> buf -> unit
-      val add_char : buf -> UChar.t -> unit
-    end
-end
 

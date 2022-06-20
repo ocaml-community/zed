@@ -7,7 +7,6 @@
  * This file is a part of Zed, an editor engine.
  *)
 
-open CamomileLibrary
 open Result
 
 (** The type for glyphs. *)
@@ -34,13 +33,13 @@ type char_prop =
   (** The property of a character. It can be either [Printable of width],
     [Other](unprintable character) or [Null](code 0). *)
 
-val to_raw : t -> UChar.t list
-val to_array : t -> UChar.t array
+val to_raw : t -> Uchar.t list
+val to_array : t -> Uchar.t array
 
-val core : t -> UChar.t
+val core : t -> Uchar.t
   (** [core char] returns the core of the [char] *)
 
-val combined : t -> UChar.t list
+val combined : t -> Uchar.t list
   (** [combined char] returns the combining marks of the [char] *)
 
 val unsafe_of_utf8 : string -> t
@@ -62,20 +61,20 @@ val to_utf8 : t -> string
 val zero : t
   (** The Character 0. *)
 
-val prop_uChar : UChar.t -> char_prop
+val prop_uChar : Uchar.t -> char_prop
   (** [prop_uChar uChar] returns the char_prop of [uChar] *)
 
 val prop : t -> char_prop
   (** [prop ch] returns the char_prop of [ch] *)
 
-val is_printable : UChar.t -> bool
-  (** Returns whether a [UChar.t] is a printable character or not. *)
+val is_printable : Uchar.t -> bool
+  (** Returns whether a [Uchar.t] is a printable character or not. *)
 
-val is_printable_core : UChar.t -> bool
-  (** Returns whether a [UChar.t] is a printable character and its width is not zero. *)
+val is_printable_core : Uchar.t -> bool
+  (** Returns whether a [Uchar.t] is a printable character and its width is not zero. *)
 
-val is_combining_mark : UChar.t -> bool
-  (** Returns whether a [UChar.t] is a combining mark. *)
+val is_combining_mark : Uchar.t -> bool
+  (** Returns whether a [Uchar.t] is a combining mark. *)
 
 val size : t -> int
   (** [size ch] returns the size (number of characters) of [ch]. *)
@@ -89,13 +88,13 @@ val width : t -> int
 val out_of_range : t -> int -> bool
   (** [out_of_range ch idx] returns whether [idx] is out of range of [ch]. *)
 
-val get : t -> int -> UChar.t
+val get : t -> int -> Uchar.t
   (** [get ch n] returns the [n]-th character of [ch]. *)
 
-val get_opt : t -> int -> UChar.t option
+val get_opt : t -> int -> Uchar.t option
   (** [get ch n] returns an optional value of the [n]-th character of [ch]. *)
 
-val append : t -> UChar.t -> t
+val append : t -> Uchar.t -> t
   (** [append ch cm] append the combining mark [cm] to ch and returns it. If [cm] is not a combining mark, then the original [ch] is returned. *)
 
 val compare_core : t -> t -> int
@@ -107,34 +106,34 @@ val compare_raw : t -> t -> int
 val compare : t -> t -> int
   (** Alias of compare_raw *)
 
-val mix_uChar : t -> UChar.t -> (t, t) result
+val mix_uChar : t -> Uchar.t -> (t, t) result
   (** [mix_uChar chr uChar] tries to append [uChar] to [chr] and returns
     [Ok result]. If [uChar] is not a combining mark, then an
     [Error (Zed_char.t consists of uChar)] is returned. *)
 
-val of_uChars : ?trim:bool -> ?indv_combining:bool -> UChar.t list -> t option * UChar.t list
+val of_uChars : ?trim:bool -> ?indv_combining:bool -> Uchar.t list -> t option * Uchar.t list
   (** [of_uChars uChars] transforms [uChars] to a tuple. The first value
     is an optional [Zed_char.t] and the second is a list of remaining
     uChars. The optional [Zed_char.t] is either a legal grapheme(a core
     printable char with optinal combining marks) or a wrap for an
-    arbitrary UChar.t. After that, all remaining uChars returned as the
+    arbitrary Uchar.t. After that, all remaining uChars returned as the
     second value in the tuple.
     @param trim trim leading combining marks before transforming, default to [false]
     @param indv_combining create a [Zed_char] from an individual dissociated combining mark, default to [true]
   *)
 
-val zChars_of_uChars : ?trim:bool -> ?indv_combining:bool -> UChar.t list -> t list * UChar.t list
+val zChars_of_uChars : ?trim:bool -> ?indv_combining:bool -> Uchar.t list -> t list * Uchar.t list
   (** [zChars of_uChars uChars] transforms [uChars] to a tuple. The first
     value is a list of [Zed_char.t] and the second is a list of remaining uChars.
     @param trim trim leading combining marks before transforming, default to [false]
     @param indv_combining create a [Zed_char] from an individual dissociated combining mark, default to [true]
   *)
 
-val for_all : (UChar.t -> bool) -> t -> bool
+val for_all : (Uchar.t -> bool) -> t -> bool
   (** [for_all p zChar] checks if all elements of [zChar]
    satisfy the predicate [p]. *)
 
-val iter : (UChar.t -> unit) -> t -> unit
+val iter : (Uchar.t -> unit) -> t -> unit
   (** [iter f char] applies [f] on all characters of [char]. *)
 
 (** The prefix 'unsafe_' of [unsafe_of_char] and [unsafe_of_uChar] means
@@ -155,21 +154,5 @@ val iter : (UChar.t -> unit) -> t -> unit
 val unsafe_of_char : char -> t
   (** [unsafe_of_char ch] returns a [Zed_char] whose core is [ch]. *)
 
-val unsafe_of_uChar : UChar.t -> t
+val unsafe_of_uChar : Uchar.t -> t
   (** [unsafe_of_uChar ch] returns a [Zed_char] whose core is [ch]. *)
-
-(** Converting between [UnicodeString.Type] and [Zed_char.t] *)
-module US :
-  functor (US : UnicodeString.Type) ->
-    sig
-      module Convert :
-        sig
-          val of_list : UChar.t list -> US.t
-          val of_array : UChar.t array -> US.t
-          val to_uChars : US.t -> UChar.t list
-        end
-      val of_t : t -> US.t
-      val to_t : US.t -> t option * UChar.t list
-      val to_t_exn : US.t -> t
-    end
-
