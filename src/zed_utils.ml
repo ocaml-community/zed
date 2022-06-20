@@ -8,41 +8,6 @@
  *)
 
 
-open CamomileLibraryDefault.Camomile
-
-module Convert(US: UnicodeString.Type)= struct
-  let of_list l=
-    let buf= US.Buf.create 0 in
-    let rec convert l=
-      match l with
-      | []-> ()
-      | c::tl -> US.Buf.add_char buf c; convert tl
-    in
-    convert l;
-    US.Buf.contents buf
-
-  let of_array a=
-    let buf= US.Buf.create 0 in
-    for i= 0 to Array.length a - 1 do
-      US.Buf.add_char buf a.(i)
-    done;
-    US.Buf.contents buf
-
-  let to_uChars us=
-    let first= US.first us
-    and last= US.last us in
-    let length= US.length us in
-    let rec create acc i=
-      if US.compare_index us i first >= 0
-      then create (US.look us i :: acc) (US.prev us i)
-      else acc
-    in
-    if length > 0 then
-      create [] last
-    else
-      []
-end
-
 let array_rev a=
   let len= Array.length a - 1 in
   Array.init len (fun i-> a.(len-i))

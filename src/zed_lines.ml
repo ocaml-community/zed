@@ -10,8 +10,6 @@
 
 open Result
 
-open CamomileLibraryDefault.Camomile
-
 exception Out_of_bounds
 
 (* +-----------------------------------------------------------------+
@@ -308,7 +306,7 @@ let of_rope rope =
       append acc (String { length; width; width_info })
     else
       let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code (Zed_char.core ch) = 10 then
+      if Uchar.to_int (Zed_char.core ch) = 10 then
         let width, width_info= calc_widths widths in
         loop0 zip (append (append acc (String { length; width; width_info })) Return)
       else
@@ -318,7 +316,7 @@ let of_rope rope =
       acc
     else
       let ch, zip = Zed_rope.Zip.next zip in
-      if UChar.code (Zed_char.core ch) = 10 then
+      if Uchar.to_int (Zed_char.core ch) = 10 then
         loop0 zip (append acc Return)
       else
         loop zip (1, [Zed_char.width ch]) acc
