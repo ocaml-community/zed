@@ -31,4 +31,5 @@ cursor management facilities.")
   react
   result
   uutf
+  uucp
   uuseg))

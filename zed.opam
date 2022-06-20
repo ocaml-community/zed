@@ -21,6 +21,7 @@ depends: [
   "react"
   "result"
   "uutf"
+  "uucp"
   "uuseg"
   "odoc" {with-doc}
 ]
