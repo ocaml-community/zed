@@ -30,8 +30,9 @@ cursor management facilities.")
   base-bytes
   (camomile
    (>= 1.0.1))
-  react
   (charInfo_width
    (and
     (>= 1.1.0)
-    (< 2.0~)))))
+    (< 2.0~)))
+  react
+  result))
