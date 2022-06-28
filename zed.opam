@@ -17,7 +17,6 @@ bug-reports: "https://github.com/ocaml-community/zed/issues"
 depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "4.02.3"}
-  "base-bytes"
   "react"
   "result"
   "uutf"

@@ -27,7 +27,6 @@ cursor management facilities.")
  (depends
   (ocaml
    (>= 4.02.3))
-  base-bytes
   react
   result
   uutf
