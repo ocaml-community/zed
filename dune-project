@@ -29,6 +29,8 @@ cursor management facilities.")
    (>= 4.02.3))
   react
   result
+  uchar
   uutf
-  uucp
+  (uucp
+   (>= 1.1.0))
   uuseg))
