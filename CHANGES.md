@@ -1,4 +1,4 @@
-3.2.0 (2022-06-20)
+3.2.0 (2022-06-30)
 ------------------
 
 * Replace Camomile with uu* (Nicolás Ojeda Bär, ZAN DoYe, Thibaut Mattio, #46)
