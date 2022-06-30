@@ -3,4 +3,4 @@
   (public_name zed)
   (wrapped false)
   (flags (:standard -safe-string))
-  (libraries react result uutf uucp uuseg))
+  (libraries react result uchar uutf uucp uuseg))
