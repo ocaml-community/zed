@@ -1,1 +1,1 @@
-next_error "\247\165\165\165" = (0, _, "scalar value too large in UTF8 sequence")
+next_error (scalar value too large) = (0, _, "scalar value too large in UTF8 sequence")
