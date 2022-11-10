@@ -1,3 +1,8 @@
+3.2.1 (2022-11-10)
+------------------
+
+* Check if decoded values fit in Uchar (Etienne Millon, #50)
+
 3.2.0 (2022-06-30)
 ------------------
 
