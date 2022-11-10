@@ -74,8 +74,12 @@ let next_error s i =
                 (i, ulen, "malformed UTF8 sequence")
               else if byte3 land 0xc0 != 0x80 then
                 (i, ulen, "malformed UTF8 sequence")
-              else if ((Char.code ch land 0x07) lsl 18) lor ((byte1 land 0x3f) lsl 12) lor ((byte2 land 0x3f) lsl 6) lor (byte3 land 0x3f) < 0x10000 then
+              else
+                let value = ((Char.code ch land 0x07) lsl 18) lor ((byte1 land 0x3f) lsl 12) lor ((byte2 land 0x3f) lsl 6) lor (byte3 land 0x3f) in
+                if value < 0x10000 then
                 (i, ulen, "overlong UTF8 sequence")
+              else if value > Uchar.to_int Uchar.max then
+                (i, ulen, "scalar value too large in UTF8 sequence")
               else
                 main (i + 4) (ulen + 1)
             end
