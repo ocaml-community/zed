@@ -1,2 +1,5 @@
 next_error (scalar value too large) = (0, _, "scalar value too large in UTF8 sequence")
 Zed_utf8.Out_of_bounds.
+Zed_utf8.Invalid raised.
+Zed_utf8.Invalid raised.
+Zed_utf8.Invalid raised.
