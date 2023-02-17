@@ -46,7 +46,10 @@ val next_error : t -> int -> int * int * string
       [ofs] (inclusive) in [str], [count] is the number of unicode
       character between [ofs] and [ofs'] (exclusive) and [msg] is an
       error message. If there is no error until the end of string then
-      [ofs] is [String.length str] and [msg] is the empty string. *)
+      [ofs] is [String.length str] and [msg] is the empty string.
+
+    @raise [Zed_utf8.Invalid] if [str] is not a correct UTF8 sequence.
+    @raise [Zed_utf8.Out_of_bounds] if [ofs] not an index of [str]. *)
 
 (** {5 Construction} *)
 
