@@ -275,6 +275,7 @@ let sub rope idx len =
     unsafe_sub rope idx len
 
 let make length char =
+  if length < 0 then raise Out_of_bounds else
   if length < max_leaf_size then
     Leaf(Zed_string.make length char, (length, length))
   else begin
@@ -722,9 +723,16 @@ module Zip_raw = struct
     zip : rope_zipper;
   }
 
+  (* let rec pp_rope t=
+    match t with
+    | Leaf (s,_)-> s
+    | Node (_,_,l,_,r)-> Zed_string.append (pp_rope l) (pp_rope r) *)
+
   let rec make_f_rec ofs rope pos rest_b rest_f =
+    (* Format.printf "ROPE == %s\n" (Zed_string.to_utf8 (pp_rope rope)); *)
     match rope with
     | Leaf(str, _) ->
+      (* Format.printf "str == %s\n" (Zed_string.to_utf8 str); *)
       { idx= Zed_string.move_raw str 0 pos;
         pos = pos;
         zip = { str; ofs = ofs - pos; leaf = rope; rest_b; rest_f } }

@@ -227,13 +227,21 @@ let unsafe_extract_prev str ofs =
                   let ch3 = String.unsafe_get str (ofs - 3) in
                   match ch3 with
                     | '\xe0' .. '\xef' ->
-                        (Uchar.of_int (((Char.code ch3 land 0x0f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 3)
+                        let n = (((Char.code ch3 land 0x0f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)) in
+                        if not (Uchar.is_valid n) then
+                          fail str ofs "not a Unicode scalar value"
+                        else
+                          Uchar.of_int n, ofs - 3
                     | '\x80' .. '\xbf' ->
                         if ofs >= 4 then
                           let ch4 = String.unsafe_get str (ofs - 4) in
                           match ch4 with
                             | '\xf0' .. '\xf7' ->
-                                (Uchar.of_int (((Char.code ch4 land 0x07) lsl 18) lor ((Char.code ch3 land 0x3f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)), ofs - 4)
+                                let n = (((Char.code ch4 land 0x07) lsl 18) lor ((Char.code ch3 land 0x3f) lsl 12) lor ((Char.code ch2 land 0x3f) lsl 6) lor (Char.code ch1 land 0x3f)) in
+                                if not (Uchar.is_valid n) then
+                                  fail str ofs "not a Unicode scalar value"
+                                else
+                                  Uchar.of_int n, ofs - 4
                             | _ ->
                                 fail str (ofs - 4) "invalid start of UTF-8 sequence"
                         else
