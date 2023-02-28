@@ -83,218 +83,28 @@ let new_clipboard () =
   { clipboard_get = (fun () -> !r);
     clipboard_set = (fun x -> r := x) }
 
-
-
-  (* let uuseg_add_custom segmenter v =
-    (* Format.printf "%s" (if f then "[LS]" else "[LW]"); *)
-    ignore(v_but_printed true v);
-    v_but_printed false (Uuseg.add segmenter v) *)
-
-
-
-
-(* let _default_match_word =
-  let rec loop_start segmenter zip =
-    Format.printf "[LS]\n";
-    match Zed_rope.Zip_raw.next zip with
-    | exception Zed_rope.Out_of_bounds -> None
-    | ch, zip ->
-      Format.printf "LS. next ch = %c\n" (Uchar.to_char ch);
-      (* match Uuseg.add segmenter (`Uchar ch) with *)
-      match uuseg_add_custom segmenter (`Uchar ch) with
-      | `Await          -> loop_start segmenter zip
-      (* | `Await          -> loop_word segmenter zip ~pos:1 `Await *)
-      | `Uchar _ | `End -> None
-      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
-      (* ~pos:0 ? pas forcment, le mot qu'on cherche peut commencer apres *)
-  and loop_word segmenter zip v ~pos =
-  Format.printf "[L]\n";
-    (* match Uuseg.add segmenter v with *)
-    match uuseg_add_custom segmenter v with
-    | `Boundary | `End -> Format.printf "FINAL POS = %d zipper = %d\n" pos (Zed_rope.Zip_raw.offset zip); Some pos
-    | `Uchar _         -> Format.printf "pos = %d\n" (pos+1); loop_word segmenter zip `Await ~pos:(pos+1)
-    | `Await           ->
-      Format.printf "L. Await before matching.\n";
-      match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds -> Format.printf "!\n"; Some pos
-      | ch, zip -> Format.printf "L. next ch = %c\n" (Uchar.to_char ch); loop_word segmenter zip (`Uchar ch) ~pos:(pos + 1)
-  in
-  fun rope idx ->
-    Format.printf ">>>>rope length = %d\n" (Zed_rope.length rope);
-    Format.printf ">>>>idx         = %d\n" idx;
-    let zip = Zed_rope.Zip_raw.make_f rope idx in
-    loop_start (Uuseg.create `Word) zip *)
-
-  (* let _default_match_word =
-(* loop start on cherche le boudary du debut, si on est deja dans le mot on va dans loop word *)
-(* loop word, on tourne jusqua trouver le boundary de la fin du mot. On le ret *)
-    let rec loop segmenter zip v ~pos =
-      Format.printf "Loop, pos = %d.@." pos;
-      match uuseg_add_custom segmenter v with
-      | `Boundary | `End             ->
-        Format.printf "FINAL POS = %d zipper = %d\n" pos (Zed_rope.Zip_raw.offset zip); Some pos
-      | `Uchar _         -> loop segmenter zip `Await ~pos
-      | `Await           ->
-        Format.printf "Increment position with next char.@.";
-        match Zed_rope.Zip_raw.next zip with
-        | exception Zed_rope.Out_of_bounds -> Format.printf "!\n"; Some (pos + 1)
-        | ch, zip -> Format.printf "Call loop with char %c@." (Uchar.to_char ch);
-                     loop segmenter zip (`Uchar ch) ~pos:(pos + 1)
-    in
-
-    let loop_start segmenter zip =
-      Format.printf "Main loop: start@.";
-      match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds -> None
-      | ch, zip ->
-        Format.printf "LS. next ch = %c\n" (Uchar.to_char ch);
-        loop segmenter zip (`Uchar ch) ~pos:0
-      in
-
-    fun rope idx ->
-      Format.printf "rope length = %d\n" (Zed_rope.length rope);
-      Format.printf "idx         = %d\n" idx;
-      let zip = Zed_rope.Zip_raw.make_f rope idx in
-      loop_start (Uuseg.create `Line_break) zip *)
-
-
-
-
-
-
-let pp_v v =
-  (* let prefix () = Format.printf "%s" (if f then ">>" else "  ") in *)
-  match v with
-  | `Await    -> Format.printf "Await\n";
-  | `Uchar c  -> Format.printf "Uchar [%c]\n" (Uchar.to_char c);
-  | `End      -> Format.printf "End\n";
-  | `Boundary -> Format.printf "Boundary\n"
-
-let v_but_printed f v =
-  let prefix () = Format.printf "%s" (if f then ">>" else "  ") in
-  match v with
-  | `Await    -> prefix (); Format.printf "Await@."; v;
-  | `Uchar c  -> prefix (); Format.printf "Uchar [%c]@." (Uchar.to_char c); v;
-  | `End      -> prefix (); Format.printf "End@."; v;
-  | `Boundary -> prefix (); Format.printf "Boundary@."; v
-
 let default_match_word =
-  let rec loop_word segmenter zip v ~pos =
-    (* Format.printf "\nLW. pos = %d\n" pos; *)
-    pp_v v;
-    match Uuseg.add segmenter v with
-    | `Boundary | `End ->
-      Format.printf "BOUNDARY >>. Exiting and return pos = %d\n" pos;
-      Some pos
-    | `Uchar _         ->
-      (* Format.printf "LW. curr_Uchar = %c code = %d\n" (Uchar.to_char u) (Char.code (Uchar.to_char u)); *)
-      loop_word segmenter zip `Await ~pos:pos
-    | `Await           ->
-      match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds ->
-        Format.printf "Plus rien, pos = %d\n" (pos+1);
-        Some (pos+1)
-      | ch, zip ->
-        (* Format.printf "LW. next ch = %c at pos %d\n" (Uchar.to_char ch) (Zed_rope.Zip_raw.offset zip); *)
-        loop_word segmenter zip (`Uchar ch) ~pos:(pos + 1)
-  in
-
   let rec loop_start segmenter zip =
-    let zip_pos = (Zed_rope.Zip_raw.offset zip) in
-    (* Format.printf "\nLS. zipper = %d\n" zip_pos; *)
     match Zed_rope.Zip_raw.next zip with
     | exception Zed_rope.Out_of_bounds -> None
     | ch, zip ->
-      (* Format.printf "LS. Next zip, pos = %d\n on add au segmenter " (Zed_rope.Zip_raw.offset zip); *)
-      pp_v (`Uchar ch);
-      (* Format.printf "LS. next ch = %c\n" (Uchar.to_char ch); *)
-      (* match Uuseg.add segmenter (`Uchar ch) with *)
       match Uuseg.add segmenter (`Uchar ch) with
       | `Await          -> loop_start segmenter zip
-      (* | `Await          -> loop_word segmenter zip ~pos:1 `Await *)
       | `Uchar _ | `End -> None
-      | `Boundary       ->
-        Format.printf "##. Move  to loop word with ch = %c, pos = %d\n" (Uchar.to_char ch) zip_pos;
-        loop_word segmenter zip ~pos:zip_pos `Await
-    in
-
-  fun rope idx ->
-    Format.printf "rope length = %d\n" (Zed_rope.length rope);
-    Format.printf "idx         = %d\n" idx;
-    let zip = Zed_rope.Zip_raw.make_f rope idx in
-    loop_start (Uuseg.create `Word) zip
-
-
-
-
-
-
-
-
-
-
-
-
-(* separe *)
-(* let default_match_word =
-  let rec loop_word segmenter zip v ~pos =
-    (* Format.printf "[pos]%d\n" pos; *)
-    match uuseg_add_custom false segmenter v with
-    | `Boundary | `End -> Format.printf "FINAL POS = %d\n" pos; Some pos
+      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
+  and loop_word segmenter zip v ~pos =
+    match Uuseg.add segmenter v with
+    | `Boundary | `End -> Some pos
     | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
     | `Await           ->
       match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds -> Some pos
-      | ch, zip -> Format.printf "[LW]char next = %c\n" (Uchar.to_char ch); loop_word segmenter zip (`Uchar ch) ~pos in
-
-  let rec loop_start segmenter zip =
-    match Zed_rope.Zip_raw.next zip with
-    | exception Zed_rope.Out_of_bounds -> None
-    | ch, zip ->
-      Format.printf "[LS]char next = %c\n" (Uchar.to_char ch);
-      match uuseg_add_custom true segmenter (`Uchar ch) with
-      | `Await          -> loop_start segmenter zip
-      | `Uchar _ | `End -> None
-      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
+      | exception Zed_rope.Out_of_bounds -> Some (pos + 1)
+      | ch, zip -> loop_word segmenter zip (`Uchar ch) ~pos
   in
   fun rope idx ->
-
     let zip = Zed_rope.Zip_raw.make_f rope idx in
-    loop_start (Uuseg.create `Word) zip *)
-
-
-
-
-
-
-(* compact *)
-(* let default_match_word =
-  let rec loop_word segmenter zip v ~pos =
-    (* Format.printf "[pos]%d\n" pos; *)
-    match uuseg_add_custom false segmenter v with
-    | `Boundary | `End -> Format.printf "FINAL POS = %d\n" pos; Some pos
-    | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
-    | `Await           ->
-      match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds -> Some pos
-      | ch, zip -> Format.printf "[LW]char next = %c\n" (Uchar.to_char ch); loop_word segmenter zip (`Uchar ch) ~pos in
-
-  let rec loop_start segmenter zip =
-    match Zed_rope.Zip_raw.next zip with
-    | exception Zed_rope.Out_of_bounds -> None
-    | ch, zip ->
-      Format.printf "[LS]char next = %c\n" (Uchar.to_char ch);
-      match uuseg_add_custom true segmenter (`Uchar ch) with
-      | `Await          -> loop_start segmenter zip
-      | `Uchar _ | `End -> None
-      | `Boundary       -> loop_word segmenter zip ~pos:0 `Await
-  in
-  fun rope idx ->
-    Format.printf ">>>>rope length = %d\n" (Zed_rope.length rope);
-    Format.printf ">>>>idx         = %d\n" idx;
-    let zip = Zed_rope.Zip_raw.make_f rope idx in
-    loop_start (Uuseg.create `Word) zip *)
-
+    match loop_start (Uuseg.create `Word) zip with
+    | Some pos -> Some (idx + pos) | None -> None
 
 let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = default_match_word) ?(locale = S.const None) ?(undo_size = 1000) () =
   (* I'm not sure how to disable the unused warning with ocaml.warning and the
