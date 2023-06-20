@@ -33,4 +33,5 @@ cursor management facilities.")
   uutf
   (uucp
    (>= 2.0.0))
-  uuseg))
+  uuseg
+  (alcotest :with-test)))

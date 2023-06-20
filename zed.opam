@@ -23,6 +23,7 @@ depends: [
   "uutf"
   "uucp" {>= "2.0.0"}
   "uuseg"
+  "alcotest" {with-test}
   "odoc" {with-doc}
 ]
 build: [
