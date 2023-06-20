@@ -98,12 +98,13 @@ let default_match_word =
     | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
     | `Await           ->
       match Zed_rope.Zip_raw.next zip with
-      | exception Zed_rope.Out_of_bounds -> Some pos
+      | exception Zed_rope.Out_of_bounds -> Some (pos + 1)
       | ch, zip -> loop_word segmenter zip (`Uchar ch) ~pos
   in
   fun rope idx ->
     let zip = Zed_rope.Zip_raw.make_f rope idx in
-    loop_start (Uuseg.create `Word) zip
+    match loop_start (Uuseg.create `Word) zip with
+    | Some pos -> Some (idx + pos) | None -> None
 
 let create ?(editable=fun _pos _len -> true) ?(move = (+)) ?clipboard ?(match_word = default_match_word) ?(locale = S.const None) ?(undo_size = 1000) () =
   (* I'm not sure how to disable the unused warning with ocaml.warning and the
