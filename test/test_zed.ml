@@ -11,7 +11,6 @@ let () =
     | exception Zed_utf8.Out_of_bounds -> "Zed_utf8.Out_of_bounds.\n"
     | exception Zed_utf8.Invalid _ -> "Zed_utf8.Invalid.\n")
 
-
 let of_utf8_exception_handling_test str =
   match Zed_string.of_utf8 str with
   | _ -> Printf.printf "OK\n"
