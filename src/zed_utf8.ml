@@ -178,13 +178,26 @@ let unsafe_extract str ofs =
     | '\xe0' .. '\xef' ->
         if ofs + 3 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
-        else
-          Uchar.of_int (((Char.code ch land 0x0f) lsl 12) lor ((byte str (ofs + 1) land 0x3f) lsl 6) lor (byte str (ofs + 2) land 0x3f))
+        else (
+          let n = ((Char.code ch land 0x0f) lsl 12) lor
+                  ((byte str (ofs + 1) land 0x3f) lsl 6) lor
+                    (byte str (ofs + 2) land 0x3f) in
+          if not (Uchar.is_valid n) then
+            fail str ofs "not a Unicode scalar value"
+          else
+            Uchar.of_int n)
     | '\xf0' .. '\xf7' ->
         if ofs + 4 > String.length str then
           fail str ofs "unterminated UTF-8 sequence"
-        else
-          Uchar.of_int (((Char.code ch land 0x07) lsl 18) lor ((byte str (ofs + 1) land 0x3f) lsl 12) lor ((byte str (ofs + 2) land 0x3f) lsl 6) lor (byte str (ofs + 3) land 0x3f))
+        else (
+          let n = (((Char.code ch land 0x07) lsl 18) lor
+                    ((byte str (ofs + 1) land 0x3f) lsl 12) lor
+                    ((byte str (ofs + 2) land 0x3f) lsl  6) lor
+                    (byte str (ofs + 3) land 0x3f)) in
+          if not (Uchar.is_valid n) then
+            fail str ofs "not a Unicode scalar value"
+          else
+            Uchar.of_int n)
     | _ ->
         fail str ofs "invalid start of UTF-8 sequence"
 
