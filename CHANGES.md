@@ -1,3 +1,10 @@
+3.2.2 (2023-06-20)
+------------------
+
+* `Zed_utf8.next_error`: raise `Zed_utf8.Out_of_bounds` in case of invalid offset (@Lucccyo, #52)
+* `kill_next_word` should not raise `Out_of_bound` (@Lucccyo, #55)
+* `of_utf8`: add `Uchar.is_valid` to check the input (@Lucccyo, #51)
+
 3.2.1 (2022-11-10)
 ------------------
 
