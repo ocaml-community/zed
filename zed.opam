@@ -9,7 +9,7 @@ validation, and a rope datastructure to achieve efficient operations on large
 Unicode buffers. Zed also features a regular expression search on ropes. To
 support efficient text edition capabilities, Zed provides macro recording and
 cursor management facilities."""
-maintainer: ["opam-devel@lists.ocaml.org"]
+maintainer: ["ZAN DoYe <zandoye+ocaml@gmail.com>"]
 authors: ["Jérémie Dimino"]
 license: "BSD-3-Clause"
 homepage: "https://github.com/ocaml-community/zed"
