@@ -83,6 +83,12 @@ let new_clipboard () =
   { clipboard_get = (fun () -> !r);
     clipboard_set = (fun x -> r := x) }
 
+let is_space uchar=
+  match Uucp.Gc.general_category uchar with
+  | `Cc | `Zs | `Zl | `Zp | `Mn -> true
+  | _-> false
+let is_not_space uchar= not (is_space uchar)
+
 let default_match_word =
   let rec loop_start segmenter zip =
     match Zed_rope.Zip_raw.next zip with
@@ -95,13 +101,20 @@ let default_match_word =
   and loop_word segmenter zip v ~pos =
     match Uuseg.add segmenter v with
     | `Boundary | `End -> Some pos
-    | `Uchar _         -> loop_word segmenter zip `Await ~pos:(pos + 1)
-    | `Await           ->
+    | `Uchar char->
+      let pos=
+        (* combining characters do not step forward postion *)
+        if Zed_char.is_printable_core char then pos+1
+        else pos
+      in
+      loop_word segmenter zip `Await ~pos
+    | `Await->
       match Zed_rope.Zip_raw.next zip with
       | exception Zed_rope.Out_of_bounds -> Some (pos + 1)
       | ch, zip -> loop_word segmenter zip (`Uchar ch) ~pos
   in
   fun rope idx ->
+    if Zed_rope.get rope idx |> Zed_char.core |> is_space then None else
     let zip = Zed_rope.Zip_raw.make_f rope idx in
     match loop_start (Uuseg.create `Word) zip with
     | Some pos -> Some (idx + pos) | None -> None
@@ -445,12 +458,6 @@ let prev_line ctx =
   end
 
 let join_line ctx =
-  let is_space uchar=
-    match Uucp.Gc.general_category uchar with
-    | `Cc | `Zs | `Zl | `Zp | `Mn -> true
-    | _-> false
-  in
-  let is_not_space uchar= not (is_space uchar) in
   let text = ctx.edit.text in
   let lines= lines ctx.edit in
   let lines_num= Zed_lines.count lines in
@@ -633,7 +640,13 @@ let search_word_backward ctx =
     else
       match ctx.edit.match_word ctx.edit.text idx with
         | Some idx' ->
+          (* the match_word method now uses unicode segmentation algorithm,
+              so the tail postion should be traced *)
+          let (_, r_end)= result in
+          if idx' = r_end  then
             loop2 (idx - 1) (idx, idx')
+          else
+            Some result
         | None ->
             Some result
   in
