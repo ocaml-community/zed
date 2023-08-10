@@ -103,7 +103,7 @@ let default_match_word =
     | `Boundary | `End -> Some pos
     | `Uchar char->
       let pos=
-        (* combining characters do not step forward postion *)
+        (* combining characters do not step forward position *)
         if Zed_char.is_printable_core char then pos+1
         else pos
       in
@@ -641,7 +641,7 @@ let search_word_backward ctx =
       match ctx.edit.match_word ctx.edit.text idx with
         | Some idx' ->
           (* the match_word method now uses unicode segmentation algorithm,
-              so the tail postion should be traced *)
+              so the tail position should be traced *)
           let (_, r_end)= result in
           if idx' = r_end  then
             loop2 (idx - 1) (idx, idx')
